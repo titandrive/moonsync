@@ -17,14 +17,3 @@ Thumbs.db
 
 # npm
 npm-debug.log*
-
-# Test vault and example data
-Moonsync/
-example-data/
-vault/
-
-# Claude
-.claude/
-
-# Misc
-Kindle Highlights.md
