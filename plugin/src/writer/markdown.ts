@@ -178,8 +178,25 @@ export function generateFilename(title: string): string {
 /**
  * Generate the index note with summary stats and links to all books
  */
-export function generateIndexNote(books: BookData[]): string {
+export function generateIndexNote(books: BookData[], title: string = "A. Library Index"): string {
 	const lines: string[] = [];
+
+	// Header
+	lines.push(`# ${title}`);
+	lines.push("");
+
+	// Cover collage - show small thumbnails of all books with covers
+	const booksWithCovers = books.filter((b) => b.coverPath);
+	if (booksWithCovers.length > 0) {
+		// Sort alphabetically for consistent order
+		const sortedCovers = [...booksWithCovers].sort((a, b) =>
+			a.book.title.toLowerCase().localeCompare(b.book.title.toLowerCase())
+		);
+		// Display covers inline (Obsidian will wrap them naturally)
+		const coverImages = sortedCovers.map((b) => `![[${b.coverPath}|80]]`).join(" ");
+		lines.push(coverImages);
+		lines.push("");
+	}
 
 	// Calculate stats
 	const totalBooks = books.length;
@@ -194,10 +211,6 @@ export function generateIndexNote(books: BookData[]): string {
 			? booksWithProgress.reduce((sum, b) => sum + (b.progress || 0), 0) / booksWithProgress.length
 			: 0;
 
-	// Header
-	lines.push("# Reading Library");
-	lines.push("");
-
 	// Stats summary
 	lines.push("## Summary");
 	lines.push(`- **Books:** ${totalBooks}`);
@@ -210,7 +223,6 @@ export function generateIndexNote(books: BookData[]): string {
 
 	// Book list sorted alphabetically
 	lines.push("## Books");
-	lines.push("");
 
 	const sortedBooks = [...books].sort((a, b) =>
 		a.book.title.toLowerCase().localeCompare(b.book.title.toLowerCase())

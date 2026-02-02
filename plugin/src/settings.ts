@@ -208,6 +208,19 @@ export class MoonSyncSettingTab extends PluginSettingTab {
 					})
 			);
 
+		new Setting(containerEl)
+			.setName("Index Note Title")
+			.setDesc("Name of the library index note")
+			.addText((text) =>
+				text
+					.setPlaceholder("A. Library Index")
+					.setValue(this.plugin.settings.indexNoteTitle)
+					.onChange(async (value) => {
+						this.plugin.settings.indexNoteTitle = value || "A. Library Index";
+						await this.plugin.saveSettings();
+					})
+			);
+
 		containerEl.createEl("h3", { text: "Support" });
 
 		new Setting(containerEl)

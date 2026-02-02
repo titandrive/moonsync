@@ -60,6 +60,7 @@ export interface MoonSyncSettings {
 	showRatings: boolean;
 	showNotes: boolean;
 	showIndex: boolean;
+	indexNoteTitle: string;
 }
 
 export const DEFAULT_SETTINGS: MoonSyncSettings = {
@@ -74,6 +75,7 @@ export const DEFAULT_SETTINGS: MoonSyncSettings = {
 	showRatings: true,
 	showNotes: true,
 	showIndex: true,
+	indexNoteTitle: "A. Library Index",
 };
 
 // Moon Reader highlight colors (ARGB format)

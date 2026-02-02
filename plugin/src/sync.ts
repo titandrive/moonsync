@@ -81,9 +81,24 @@ export async function syncFromMoonReader(
 			await saveCache(app, outputPath, cache);
 		}
 
-		// Update index note if enabled and any books were created or updated
-		if (settings.showIndex && (result.booksCreated > 0 || result.booksUpdated > 0)) {
-			await updateIndexNote(app, outputPath, booksWithHighlights);
+		// Update index note if enabled and (books changed OR index doesn't exist)
+		if (settings.showIndex) {
+			const indexPath = normalizePath(`${outputPath}/${settings.indexNoteTitle}.md`);
+			const indexExists = await app.vault.adapter.exists(indexPath);
+			if (result.booksCreated > 0 || result.booksUpdated > 0 || !indexExists) {
+				// Populate cover paths for all books (for the collage)
+				const coversFolder = normalizePath(`${outputPath}/covers`);
+				for (const bookData of booksWithHighlights) {
+					if (!bookData.coverPath) {
+						const coverFilename = `${generateFilename(bookData.book.title)}.jpg`;
+						const coverPath = normalizePath(`${coversFolder}/${coverFilename}`);
+						if (await app.vault.adapter.exists(coverPath)) {
+							bookData.coverPath = `covers/${coverFilename}`;
+						}
+					}
+				}
+				await updateIndexNote(app, outputPath, booksWithHighlights, settings.indexNoteTitle);
+			}
 		}
 
 		progressNotice.hide();
@@ -262,14 +277,12 @@ async function processBook(
 	return cacheModified;
 }
 
-const INDEX_FILENAME = "A. Library Index";
-
 /**
  * Update the index note with summary and links to all books
  */
-async function updateIndexNote(app: App, outputPath: string, books: BookData[]): Promise<void> {
-	const indexPath = normalizePath(`${outputPath}/${INDEX_FILENAME}.md`);
-	const markdown = generateIndexNote(books);
+async function updateIndexNote(app: App, outputPath: string, books: BookData[], indexTitle: string): Promise<void> {
+	const indexPath = normalizePath(`${outputPath}/${indexTitle}.md`);
+	const markdown = generateIndexNote(books, indexTitle);
 
 	if (await app.vault.adapter.exists(indexPath)) {
 		await app.vault.adapter.write(indexPath, markdown);
