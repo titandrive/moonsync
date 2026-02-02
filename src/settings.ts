@@ -73,6 +73,17 @@ export class MoonSyncSettingTab extends PluginSettingTab {
 					})
 			);
 
+		containerEl.createEl("h3", { text: "Sync" });
+
+		new Setting(containerEl)
+			.setName("Sync Now")
+			.setDesc("Manually trigger a sync from Moon Reader")
+			.addButton((button) =>
+				button.setButtonText("Sync").onClick(async () => {
+					await this.plugin.runSync();
+				})
+			);
+
 		new Setting(containerEl)
 			.setName("Sync on Startup")
 			.setDesc("Automatically sync when Obsidian starts")
@@ -82,6 +93,19 @@ export class MoonSyncSettingTab extends PluginSettingTab {
 					.onChange(async (value) => {
 						this.plugin.settings.syncOnStartup = value;
 						await this.plugin.saveSettings();
+					})
+			);
+
+		new Setting(containerEl)
+			.setName("Show Ribbon Icon")
+			.setDesc("Show sync button in the left sidebar")
+			.addToggle((toggle) =>
+				toggle
+					.setValue(this.plugin.settings.showRibbonIcon)
+					.onChange(async (value) => {
+						this.plugin.settings.showRibbonIcon = value;
+						await this.plugin.saveSettings();
+						this.plugin.updateRibbonIcon();
 					})
 			);
 
@@ -133,17 +157,6 @@ export class MoonSyncSettingTab extends PluginSettingTab {
 						this.plugin.settings.fetchCovers = value;
 						await this.plugin.saveSettings();
 					})
-			);
-
-		containerEl.createEl("h3", { text: "Manual Sync" });
-
-		new Setting(containerEl)
-			.setName("Sync Now")
-			.setDesc("Manually trigger a sync from Moon Reader")
-			.addButton((button) =>
-				button.setButtonText("Sync").onClick(async () => {
-					await this.plugin.runSync();
-				})
 			);
 	}
 

@@ -1,4 +1,4 @@
-import { Plugin, Notice } from "obsidian";
+import { Plugin, Notice, setIcon } from "obsidian";
 import { MoonSyncSettings, DEFAULT_SETTINGS } from "./src/types";
 import { MoonSyncSettingTab } from "./src/settings";
 import { syncFromMoonReader, showSyncResults } from "./src/sync";
@@ -6,12 +6,16 @@ import { join } from "path";
 
 export default class MoonSyncPlugin extends Plugin {
 	settings: MoonSyncSettings = DEFAULT_SETTINGS;
+	ribbonIconEl: HTMLElement | null = null;
 
 	async onload() {
 		await this.loadSettings();
 
 		// Add settings tab
 		this.addSettingTab(new MoonSyncSettingTab(this.app, this));
+
+		// Add ribbon icon if enabled
+		this.updateRibbonIcon();
 
 		// Add sync command
 		this.addCommand({
@@ -26,6 +30,23 @@ export default class MoonSyncPlugin extends Plugin {
 			this.app.workspace.onLayoutReady(() => {
 				setTimeout(() => this.runSync(), 2000);
 			});
+		}
+	}
+
+	updateRibbonIcon() {
+		// Remove existing icon if present
+		if (this.ribbonIconEl) {
+			this.ribbonIconEl.remove();
+			this.ribbonIconEl = null;
+		}
+
+		// Add icon if setting is enabled
+		if (this.settings.showRibbonIcon) {
+			this.ribbonIconEl = this.addRibbonIcon(
+				"book-open",
+				"MoonSync: Sync Now",
+				() => this.runSync()
+			);
 		}
 	}
 

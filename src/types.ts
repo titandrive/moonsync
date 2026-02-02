@@ -47,6 +47,7 @@ export interface MoonSyncSettings {
 	dropboxPath: string;
 	outputFolder: string;
 	syncOnStartup: boolean;
+	showRibbonIcon: boolean;
 	showDescription: boolean;
 	showReadingProgress: boolean;
 	showHighlightColors: boolean;
@@ -57,6 +58,7 @@ export const DEFAULT_SETTINGS: MoonSyncSettings = {
 	dropboxPath: "",
 	outputFolder: "Books",
 	syncOnStartup: true,
+	showRibbonIcon: true,
 	showDescription: true,
 	showReadingProgress: true,
 	showHighlightColors: true,
