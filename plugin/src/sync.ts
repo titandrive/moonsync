@@ -81,8 +81,8 @@ export async function syncFromMoonReader(
 			await saveCache(app, outputPath, cache);
 		}
 
-		// Update index note if any books were created or updated
-		if (result.booksCreated > 0 || result.booksUpdated > 0) {
+		// Update index note if enabled and any books were created or updated
+		if (settings.showIndex && (result.booksCreated > 0 || result.booksUpdated > 0)) {
 			await updateIndexNote(app, outputPath, booksWithHighlights);
 		}
 

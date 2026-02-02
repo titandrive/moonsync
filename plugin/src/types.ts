@@ -58,6 +58,8 @@ export interface MoonSyncSettings {
 	showHighlightColors: boolean;
 	fetchCovers: boolean;
 	showRatings: boolean;
+	showNotes: boolean;
+	showIndex: boolean;
 }
 
 export const DEFAULT_SETTINGS: MoonSyncSettings = {
@@ -70,6 +72,8 @@ export const DEFAULT_SETTINGS: MoonSyncSettings = {
 	showHighlightColors: true,
 	fetchCovers: true,
 	showRatings: true,
+	showNotes: true,
+	showIndex: true,
 };
 
 // Moon Reader highlight colors (ARGB format)

@@ -184,6 +184,30 @@ export class MoonSyncSettingTab extends PluginSettingTab {
 					})
 			);
 
+		new Setting(containerEl)
+			.setName("Show Notes")
+			.setDesc("Include your personal notes/annotations below highlights")
+			.addToggle((toggle) =>
+				toggle
+					.setValue(this.plugin.settings.showNotes)
+					.onChange(async (value) => {
+						this.plugin.settings.showNotes = value;
+						await this.plugin.saveSettings();
+					})
+			);
+
+		new Setting(containerEl)
+			.setName("Generate Library Index")
+			.setDesc("Create an index note with summary stats and links to all books")
+			.addToggle((toggle) =>
+				toggle
+					.setValue(this.plugin.settings.showIndex)
+					.onChange(async (value) => {
+						this.plugin.settings.showIndex = value;
+						await this.plugin.saveSettings();
+					})
+			);
+
 		containerEl.createEl("h3", { text: "Support" });
 
 		new Setting(containerEl)
