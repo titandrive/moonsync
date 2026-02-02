@@ -57,18 +57,25 @@ function parseAnnotationFile(data: Buffer, filename: string): AnnotationFile | n
 					i++;
 				}
 
-				// Read highlight text (first line after empty lines)
+				// Read highlight text and optional note
+				// Format: if two lines before 0s, first is note, second is highlight text
+				// If only one line, it's just the highlight text with no note
 				let text = "";
 				let note = "";
 
 				if (i < lines.length && lines[i] !== "0") {
-					text = lines[i].replace(/<BR>/g, "\n").trim();
+					const firstLine = lines[i].replace(/<BR>/g, "\n").trim();
 					i++;
 
-					// Check if next line is a note (not "0" and not empty)
+					// Check if there's a second line (not "0" and not empty)
 					if (i < lines.length && lines[i] !== "0" && lines[i] !== "") {
-						note = lines[i].trim();
+						// Two lines: first is note, second is highlight text
+						note = firstLine;
+						text = lines[i].replace(/<BR>/g, "\n").trim();
 						i++;
+					} else {
+						// Only one line: it's the highlight text, no note
+						text = firstLine;
 					}
 				}
 

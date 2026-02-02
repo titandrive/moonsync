@@ -138,7 +138,7 @@ function formatHighlight(highlight: MoonReaderHighlight, useColors: boolean, sho
 	if (showNotes && highlight.note && highlight.note.trim()) {
 		lines.push(">");
 		lines.push(`> ---`);
-		lines.push(`> **My note:** ${highlight.note.trim()}`);
+		lines.push(`> **Note:** ${highlight.note.trim()}`);
 	}
 
 	return lines.join("\n");
@@ -193,14 +193,6 @@ export function generateIndexNote(books: BookData[]): string {
 		booksWithProgress.length > 0
 			? booksWithProgress.reduce((sum, b) => sum + (b.progress || 0), 0) / booksWithProgress.length
 			: 0;
-
-	// Frontmatter
-	lines.push("---");
-	lines.push(`total_books: ${totalBooks}`);
-	lines.push(`total_highlights: ${totalHighlights}`);
-	lines.push(`total_notes: ${totalNotes}`);
-	lines.push(`last_synced: ${new Date().toISOString().split("T")[0]}`);
-	lines.push("---");
 
 	// Header
 	lines.push("# Reading Library");
