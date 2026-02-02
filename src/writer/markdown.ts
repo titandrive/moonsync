@@ -11,7 +11,7 @@ import {
  * Generate a markdown note for a book with its highlights and reading progress
  */
 export function generateBookNote(bookData: BookData, settings: MoonSyncSettings): string {
-	const { book, highlights, statistics, progress } = bookData;
+	const { book, highlights, statistics, progress, coverPath } = bookData;
 
 	const lines: string[] = [];
 
@@ -36,6 +36,9 @@ export function generateBookNote(bookData: BookData, settings: MoonSyncSettings)
 	lines.push(`last_synced: ${new Date().toISOString().split("T")[0]}`);
 	lines.push(`moon_reader_path: "${escapeYaml(book.filename)}"`);
 	lines.push(`highlights_count: ${highlights.length}`);
+	if (coverPath) {
+		lines.push(`cover: "${coverPath}"`);
+	}
 	lines.push("---");
 	lines.push("");
 
@@ -45,6 +48,12 @@ export function generateBookNote(bookData: BookData, settings: MoonSyncSettings)
 		lines.push(`**Author:** ${book.author}`);
 	}
 	lines.push("");
+
+	// Cover image (using Obsidian wikilink syntax to handle spaces in filenames)
+	if (coverPath) {
+		lines.push(`![[${coverPath}]]`);
+		lines.push("");
+	}
 
 	// Reading Progress section
 	if (settings.showReadingProgress && (progress !== null || statistics)) {

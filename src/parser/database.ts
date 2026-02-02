@@ -79,6 +79,7 @@ export async function parseDatabase(
 				highlights: highlights.sort((a, b) => a.position - b.position),
 				statistics,
 				progress,
+				coverPath: null,
 			});
 		}
 

@@ -2,6 +2,7 @@ import { App, Notice, normalizePath } from "obsidian";
 import { findLatestBackup, extractMrpro } from "./parser/mrpro";
 import { parseDatabase } from "./parser/database";
 import { generateBookNote, generateFilename } from "./writer/markdown";
+import { fetchBookCover, downloadCover } from "./covers";
 import { MoonSyncSettings, BookData } from "./types";
 import { join } from "path";
 
@@ -105,6 +106,42 @@ async function processBook(
 ): Promise<void> {
 	const filename = generateFilename(bookData.book.title);
 	const filePath = normalizePath(`${outputPath}/${filename}.md`);
+
+	// Fetch and save cover if enabled
+	if (settings.fetchCovers) {
+		const coverFilename = `${filename}.jpg`;
+		const coversFolder = normalizePath(`${outputPath}/covers`);
+		const coverPath = normalizePath(`${coversFolder}/${coverFilename}`);
+
+		// Only fetch if cover doesn't exist
+		if (!(await app.vault.adapter.exists(coverPath))) {
+			try {
+				const coverResult = await fetchBookCover(
+					bookData.book.title,
+					bookData.book.author
+				);
+
+				if (coverResult.url) {
+					// Ensure covers folder exists
+					if (!(await app.vault.adapter.exists(coversFolder))) {
+						await app.vault.createFolder(coversFolder);
+					}
+
+					// Download and save cover
+					const imageData = await downloadCover(coverResult.url);
+					if (imageData) {
+						await app.vault.adapter.writeBinary(coverPath, imageData);
+						bookData.coverPath = `covers/${coverFilename}`;
+					}
+				}
+			} catch (error) {
+				console.log(`MoonSync: Failed to fetch cover for "${bookData.book.title}"`, error);
+			}
+		} else {
+			// Cover already exists
+			bookData.coverPath = `covers/${coverFilename}`;
+		}
+	}
 
 	const markdown = generateBookNote(bookData, settings);
 

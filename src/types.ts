@@ -40,6 +40,7 @@ export interface BookData {
 	highlights: MoonReaderHighlight[];
 	statistics: MoonReaderStatistics | null;
 	progress: number | null; // percentage
+	coverPath: string | null; // path to cover image in vault
 }
 
 export interface MoonSyncSettings {
@@ -49,6 +50,7 @@ export interface MoonSyncSettings {
 	showDescription: boolean;
 	showReadingProgress: boolean;
 	showHighlightColors: boolean;
+	fetchCovers: boolean;
 }
 
 export const DEFAULT_SETTINGS: MoonSyncSettings = {
@@ -58,6 +60,7 @@ export const DEFAULT_SETTINGS: MoonSyncSettings = {
 	showDescription: true,
 	showReadingProgress: true,
 	showHighlightColors: true,
+	fetchCovers: true,
 };
 
 // Moon Reader highlight colors (ARGB format)
