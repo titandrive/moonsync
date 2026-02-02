@@ -137,7 +137,8 @@ function formatHighlight(highlight: MoonReaderHighlight, useColors: boolean, sho
 	// User note (if present and enabled)
 	if (showNotes && highlight.note && highlight.note.trim()) {
 		lines.push(">");
-		lines.push(`> **Note:** ${highlight.note.trim()}`);
+		lines.push(`> ---`);
+		lines.push(`> 📝 *${highlight.note.trim()}*`);
 	}
 
 	return lines.join("\n");
