@@ -1,16 +1,16 @@
 import { App, Notice, normalizePath } from "obsidian";
-import { findLatestBackup, extractMrpro } from "./parser/mrpro";
-import { parseDatabase } from "./parser/database";
+import { parseAnnotationFiles } from "./parser/annotations";
 import { generateBookNote, generateFilename } from "./writer/markdown";
 import { fetchBookInfo, downloadCover } from "./covers";
 import { MoonSyncSettings, BookData } from "./types";
-import { join } from "path";
+import { loadCache, saveCache, getCachedInfo, setCachedInfo, BookInfoCache } from "./cache";
 
 export interface SyncResult {
 	success: boolean;
 	booksProcessed: number;
 	booksCreated: number;
 	booksUpdated: number;
+	booksSkipped: number;
 	errors: string[];
 }
 
@@ -27,6 +27,7 @@ export async function syncFromMoonReader(
 		booksProcessed: 0,
 		booksCreated: 0,
 		booksUpdated: 0,
+		booksSkipped: 0,
 		errors: [],
 	};
 
@@ -41,33 +42,12 @@ export async function syncFromMoonReader(
 			return result;
 		}
 
-		// Find the Backup folder within the .Moon+ directory
-		const backupDir = join(settings.dropboxPath, ".Moon+", "Backup");
-
-		// Find the latest backup
-		const backupPath = await findLatestBackup(backupDir);
-
-		if (!backupPath) {
-			result.errors.push(`No .mrpro backup files found in ${backupDir}`);
-			progressNotice.hide();
-			return result;
-		}
-
-		// Extract the database from the backup
-		const mrproContents = await extractMrpro(backupPath);
-
-		// Parse the database
-		const bookDataList = await parseDatabase(mrproContents.database, wasmPath);
-
-		// Filter to only books with highlights
-		const booksWithHighlights = bookDataList.filter(
-			(b) => b.highlights.length > 0
-		);
+		// Parse annotation files from Cache folder (real-time sync)
+		const booksWithHighlights = await parseAnnotationFiles(settings.dropboxPath);
 
 		if (booksWithHighlights.length === 0) {
+			result.errors.push("No annotation files found in .Moon+/Cache folder");
 			progressNotice.hide();
-			new Notice("MoonSync: No books with highlights found");
-			result.success = true;
 			return result;
 		}
 
@@ -77,16 +57,28 @@ export async function syncFromMoonReader(
 			await app.vault.createFolder(outputPath);
 		}
 
+		// Load book info cache
+		const cache = await loadCache(app, outputPath);
+		let cacheModified = false;
+
 		// Process each book
 		for (const bookData of booksWithHighlights) {
 			try {
-				await processBook(app, outputPath, bookData, settings, result);
+				const processed = await processBook(app, outputPath, bookData, settings, result, cache);
+				if (processed) {
+					cacheModified = true;
+				}
 				result.booksProcessed++;
 			} catch (error) {
 				result.errors.push(
 					`Error processing "${bookData.book.title}": ${error}`
 				);
 			}
+		}
+
+		// Save cache if modified
+		if (cacheModified) {
+			await saveCache(app, outputPath, cache);
 		}
 
 		progressNotice.hide();
@@ -100,17 +92,50 @@ export async function syncFromMoonReader(
 }
 
 /**
+ * Get the highlights count from an existing markdown file's frontmatter
+ */
+async function getExistingHighlightsCount(app: App, filePath: string): Promise<number | null> {
+	try {
+		if (!(await app.vault.adapter.exists(filePath))) {
+			return null;
+		}
+
+		const content = await app.vault.adapter.read(filePath);
+		const match = content.match(/^highlights_count:\s*(\d+)/m);
+		if (match) {
+			return parseInt(match[1], 10);
+		}
+	} catch {
+		// File doesn't exist or can't be read
+	}
+	return null;
+}
+
+/**
  * Process a single book - create or update its note
+ * Returns true if cache was modified
  */
 async function processBook(
 	app: App,
 	outputPath: string,
 	bookData: BookData,
 	settings: MoonSyncSettings,
-	result: SyncResult
-): Promise<void> {
+	result: SyncResult,
+	cache: BookInfoCache
+): Promise<boolean> {
 	const filename = generateFilename(bookData.book.title);
 	const filePath = normalizePath(`${outputPath}/${filename}.md`);
+	let cacheModified = false;
+
+	// Check if book has changed (compare highlights count)
+	const existingCount = await getExistingHighlightsCount(app, filePath);
+	const fileExists = existingCount !== null;
+
+	if (fileExists && existingCount === bookData.highlights.length) {
+		// Book hasn't changed, skip
+		result.booksSkipped++;
+		return false;
+	}
 
 	// Fetch book info (cover, description, and rating) from external sources
 	if (settings.fetchCovers || settings.showDescription || settings.showRatings) {
@@ -120,8 +145,26 @@ async function processBook(
 
 		const coverExists = await app.vault.adapter.exists(coverPath);
 
-		// Fetch from APIs if we need cover, description, or rating
-		if ((settings.fetchCovers && !coverExists) || settings.showDescription || settings.showRatings) {
+		// Check cache first for description and rating
+		const cachedInfo = getCachedInfo(cache, bookData.book.title, bookData.book.author);
+
+		if (cachedInfo) {
+			// Use cached data
+			if (cachedInfo.description) {
+				bookData.fetchedDescription = cachedInfo.description;
+			}
+			if (cachedInfo.rating !== null) {
+				bookData.rating = cachedInfo.rating;
+			}
+			if (cachedInfo.ratingsCount !== null) {
+				bookData.ratingsCount = cachedInfo.ratingsCount;
+			}
+		}
+
+		// Fetch from APIs only if we need cover (and don't have it) OR we don't have cached data
+		const needsApiFetch = (settings.fetchCovers && !coverExists) || !cachedInfo;
+
+		if (needsApiFetch) {
 			try {
 				const bookInfo = await fetchBookInfo(
 					bookData.book.title,
@@ -155,6 +198,14 @@ async function processBook(
 				if (bookInfo.ratingsCount !== null) {
 					bookData.ratingsCount = bookInfo.ratingsCount;
 				}
+
+				// Update cache
+				setCachedInfo(cache, bookData.book.title, bookData.book.author, {
+					description: bookInfo.description,
+					rating: bookInfo.rating,
+					ratingsCount: bookInfo.ratingsCount,
+				});
+				cacheModified = true;
 			} catch (error) {
 				console.log(`MoonSync: Failed to fetch book info for "${bookData.book.title}"`, error);
 			}
@@ -168,7 +219,7 @@ async function processBook(
 
 	const markdown = generateBookNote(bookData, settings);
 
-	if (await app.vault.adapter.exists(filePath)) {
+	if (fileExists) {
 		// Update existing file
 		await app.vault.adapter.write(filePath, markdown);
 		result.booksUpdated++;
@@ -177,6 +228,8 @@ async function processBook(
 		await app.vault.create(filePath, markdown);
 		result.booksCreated++;
 	}
+
+	return cacheModified;
 }
 
 /**
@@ -187,10 +240,12 @@ export function showSyncResults(result: SyncResult): void {
 		if (result.booksProcessed === 0) {
 			new Notice("MoonSync: No books with highlights to sync");
 		} else {
-			new Notice(
-				`MoonSync: Synced ${result.booksProcessed} books ` +
-					`(${result.booksCreated} new, ${result.booksUpdated} updated)`
-			);
+			const parts = [];
+			if (result.booksCreated > 0) parts.push(`${result.booksCreated} new`);
+			if (result.booksUpdated > 0) parts.push(`${result.booksUpdated} updated`);
+			if (result.booksSkipped > 0) parts.push(`${result.booksSkipped} unchanged`);
+
+			new Notice(`MoonSync: ${parts.join(", ")}`);
 		}
 	} else {
 		new Notice(`MoonSync: Sync failed - ${result.errors[0]}`);
