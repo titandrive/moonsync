@@ -1,7 +1,7 @@
 import { Plugin, Notice, setIcon } from "obsidian";
 import { MoonSyncSettings, DEFAULT_SETTINGS } from "./src/types";
 import { MoonSyncSettingTab } from "./src/settings";
-import { syncFromMoonReader, showSyncResults } from "./src/sync";
+import { syncFromMoonReader, showSyncResults, refreshIndexNote } from "./src/sync";
 import { join } from "path";
 
 export default class MoonSyncPlugin extends Plugin {
@@ -91,5 +91,9 @@ export default class MoonSyncPlugin extends Plugin {
 
 	async saveSettings() {
 		await this.saveData(this.settings);
+	}
+
+	async refreshIndex(): Promise<void> {
+		await refreshIndexNote(this.app, this.settings);
 	}
 }

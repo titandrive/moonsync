@@ -97,7 +97,7 @@ export async function syncFromMoonReader(
 						}
 					}
 				}
-				await updateIndexNote(app, outputPath, booksWithHighlights, settings.indexNoteTitle);
+				await updateIndexNote(app, outputPath, booksWithHighlights, settings);
 			}
 		}
 
@@ -280,14 +280,49 @@ async function processBook(
 /**
  * Update the index note with summary and links to all books
  */
-async function updateIndexNote(app: App, outputPath: string, books: BookData[], indexTitle: string): Promise<void> {
-	const indexPath = normalizePath(`${outputPath}/${indexTitle}.md`);
-	const markdown = generateIndexNote(books, indexTitle);
+async function updateIndexNote(app: App, outputPath: string, books: BookData[], settings: MoonSyncSettings): Promise<void> {
+	const indexPath = normalizePath(`${outputPath}/${settings.indexNoteTitle}.md`);
+	const markdown = generateIndexNote(books, settings);
 
 	if (await app.vault.adapter.exists(indexPath)) {
 		await app.vault.adapter.write(indexPath, markdown);
 	} else {
 		await app.vault.create(indexPath, markdown);
+	}
+}
+
+/**
+ * Refresh just the index note without full sync (for settings changes)
+ */
+export async function refreshIndexNote(app: App, settings: MoonSyncSettings): Promise<void> {
+	if (!settings.showIndex || !settings.dropboxPath) {
+		return;
+	}
+
+	try {
+		// Parse annotation files to get book data
+		const booksWithHighlights = await parseAnnotationFiles(settings.dropboxPath);
+		if (booksWithHighlights.length === 0) {
+			return;
+		}
+
+		const outputPath = normalizePath(settings.outputFolder);
+		const coversFolder = normalizePath(`${outputPath}/covers`);
+
+		// Populate cover paths for all books
+		for (const bookData of booksWithHighlights) {
+			if (!bookData.coverPath) {
+				const coverFilename = `${generateFilename(bookData.book.title)}.jpg`;
+				const coverPath = normalizePath(`${coversFolder}/${coverFilename}`);
+				if (await app.vault.adapter.exists(coverPath)) {
+					bookData.coverPath = `covers/${coverFilename}`;
+				}
+			}
+		}
+
+		await updateIndexNote(app, outputPath, booksWithHighlights, settings);
+	} catch (error) {
+		console.error("MoonSync: Failed to refresh index", error);
 	}
 }
 

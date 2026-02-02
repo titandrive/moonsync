@@ -178,24 +178,44 @@ export function generateFilename(title: string): string {
 /**
  * Generate the index note with summary stats and links to all books
  */
-export function generateIndexNote(books: BookData[], title: string = "A. Library Index"): string {
+export function generateIndexNote(books: BookData[], settings: MoonSyncSettings): string {
 	const lines: string[] = [];
 
 	// Header
-	lines.push(`# ${title}`);
+	lines.push(`# ${settings.indexNoteTitle}`);
 	lines.push("");
 
-	// Cover collage - show small thumbnails of all books with covers
-	const booksWithCovers = books.filter((b) => b.coverPath);
-	if (booksWithCovers.length > 0) {
-		// Sort alphabetically for consistent order
-		const sortedCovers = [...booksWithCovers].sort((a, b) =>
-			a.book.title.toLowerCase().localeCompare(b.book.title.toLowerCase())
-		);
-		// Display covers inline (Obsidian will wrap them naturally)
-		const coverImages = sortedCovers.map((b) => `![[${b.coverPath}|80]]`).join(" ");
-		lines.push(coverImages);
-		lines.push("");
+	// Cover collage - show small thumbnails of books with covers
+	if (settings.showCoverCollage) {
+		const booksWithCovers = books.filter((b) => b.coverPath);
+		if (booksWithCovers.length > 0) {
+			// Sort based on setting
+			let sortedCovers: BookData[];
+			if (settings.coverCollageSort === "recent") {
+				// Sort by last read timestamp (most recent first), fallback to title
+				sortedCovers = [...booksWithCovers].sort((a, b) => {
+					const aTime = a.lastReadTimestamp || 0;
+					const bTime = b.lastReadTimestamp || 0;
+					if (bTime !== aTime) return bTime - aTime;
+					return a.book.title.toLowerCase().localeCompare(b.book.title.toLowerCase());
+				});
+			} else {
+				// Sort alphabetically
+				sortedCovers = [...booksWithCovers].sort((a, b) =>
+					a.book.title.toLowerCase().localeCompare(b.book.title.toLowerCase())
+				);
+			}
+
+			// Apply limit if set (0 = no limit)
+			const coversToShow = settings.coverCollageLimit > 0
+				? sortedCovers.slice(0, settings.coverCollageLimit)
+				: sortedCovers;
+
+			// Display covers inline (Obsidian will wrap them naturally)
+			const coverImages = coversToShow.map((b) => `![[${b.coverPath}|80]]`).join(" ");
+			lines.push(coverImages);
+			lines.push("");
+		}
 	}
 
 	// Calculate stats

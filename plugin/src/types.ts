@@ -61,6 +61,9 @@ export interface MoonSyncSettings {
 	showNotes: boolean;
 	showIndex: boolean;
 	indexNoteTitle: string;
+	showCoverCollage: boolean;
+	coverCollageLimit: number; // 0 = all
+	coverCollageSort: "alpha" | "recent";
 }
 
 export const DEFAULT_SETTINGS: MoonSyncSettings = {
@@ -75,7 +78,10 @@ export const DEFAULT_SETTINGS: MoonSyncSettings = {
 	showRatings: true,
 	showNotes: true,
 	showIndex: true,
-	indexNoteTitle: "A. Library Index",
+	indexNoteTitle: "1. Library Index",
+	showCoverCollage: true,
+	coverCollageLimit: 0, // 0 = show all
+	coverCollageSort: "alpha",
 };
 
 // Moon Reader highlight colors (ARGB format)

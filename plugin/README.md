@@ -24,6 +24,13 @@ MoonSync is a **read-only** sync plugin. It reads your Moon Reader data from Dro
 
 ## Installation
 
+### Via BRAT (Recommended)
+
+1. Install the [BRAT plugin](https://github.com/TfTHacker/obsidian42-brat) from Community Plugins
+2. Open BRAT settings and click "Add Beta Plugin"
+3. Enter: `titandrive/moonsync`
+4. Click "Add Plugin" and enable MoonSync in Community Plugins
+
 ### From Release
 
 1. Download `main.js` and `manifest.json` from the [latest release](https://github.com/titandrive/moonsync/releases)
@@ -34,7 +41,7 @@ MoonSync is a **read-only** sync plugin. It reads your Moon Reader data from Dro
 ### Manual Build
 
 1. Clone the repository
-2. Run `npm install` and `npm run build`
+2. `cd plugin && npm install && npm run build`
 3. Copy `main.js` and `manifest.json` to your vault's `.obsidian/plugins/moonsync/`
 
 ## Settings
@@ -75,7 +82,9 @@ Vault folder where book notes are created. Defaults to `Books`.
 
 **Show Notes** - Include your personal notes/annotations below highlights.
 
-**Generate Library Index** - Create an index note with summary stats and links to all books.
+**Generate Library Index** - Create an index note with summary stats, cover collage, and links to all books.
+
+**Index Note Title** - Customize the name of the library index note. Defaults to `1. Library Index`.
 
 ## Output Format
 
@@ -124,10 +133,12 @@ Book description from Google Books...
 
 ### Library Index
 
-When enabled, creates `A. Library Index.md` with:
+When enabled, creates `1. Library Index.md` with a cover collage and summary:
 
 ```markdown
-# Reading Library
+# 1. Library Index
+
+![[covers/Book Title.jpg|80]] ![[covers/Another Book.jpg|80]]
 
 ## Summary
 - **Books:** 5
@@ -136,7 +147,6 @@ When enabled, creates `A. Library Index.md` with:
 - **Average Progress:** 65.2%
 
 ## Books
-
 - [[Book Title|Book Title]] by Author (75%) — 12 highlights, 3 notes
 - [[Another Book|Another Book]] by Writer (30%) — 8 highlights
 ```

@@ -213,11 +213,54 @@ export class MoonSyncSettingTab extends PluginSettingTab {
 			.setDesc("Name of the library index note")
 			.addText((text) =>
 				text
-					.setPlaceholder("A. Library Index")
+					.setPlaceholder("1. Library Index")
 					.setValue(this.plugin.settings.indexNoteTitle)
 					.onChange(async (value) => {
-						this.plugin.settings.indexNoteTitle = value || "A. Library Index";
+						this.plugin.settings.indexNoteTitle = value || "1. Library Index";
 						await this.plugin.saveSettings();
+					})
+			);
+
+		new Setting(containerEl)
+			.setName("Show Cover Collage")
+			.setDesc("Display book covers at the top of the library index")
+			.addToggle((toggle) =>
+				toggle
+					.setValue(this.plugin.settings.showCoverCollage)
+					.onChange(async (value) => {
+						this.plugin.settings.showCoverCollage = value;
+						await this.plugin.saveSettings();
+						await this.plugin.refreshIndex();
+					})
+			);
+
+		new Setting(containerEl)
+			.setName("Cover Collage Limit")
+			.setDesc("Maximum number of covers to show (0 = show all)")
+			.addText((text) =>
+				text
+					.setPlaceholder("0")
+					.setValue(String(this.plugin.settings.coverCollageLimit))
+					.onChange(async (value) => {
+						const num = parseInt(value) || 0;
+						this.plugin.settings.coverCollageLimit = Math.max(0, num);
+						await this.plugin.saveSettings();
+						await this.plugin.refreshIndex();
+					})
+			);
+
+		new Setting(containerEl)
+			.setName("Cover Collage Sort")
+			.setDesc("How to sort covers in the collage")
+			.addDropdown((dropdown) =>
+				dropdown
+					.addOption("alpha", "Alphabetical")
+					.addOption("recent", "Most Recent")
+					.setValue(this.plugin.settings.coverCollageSort)
+					.onChange(async (value: "alpha" | "recent") => {
+						this.plugin.settings.coverCollageSort = value;
+						await this.plugin.saveSettings();
+						await this.plugin.refreshIndex();
 					})
 			);
 
