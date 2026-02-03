@@ -274,6 +274,41 @@ export class MoonSyncSettingTab extends PluginSettingTab {
 					})
 			);
 
+		const basesHeader = containerEl.createEl("h2", { text: "Obsidian Bases" });
+		basesHeader.createSpan({ text: "\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0" });
+		basesHeader.createSpan({ text: "Auto-generate database view configuration for the Bases plugin.", cls: "setting-item-description" });
+
+		new Setting(containerEl)
+			.setName("Generate Base File")
+			.setDesc("Automatically create and update the .base file for the Obsidian Bases plugin")
+			.addToggle((toggle) =>
+				toggle
+					.setValue(this.plugin.settings.generateBaseFile)
+					.onChange(async (value) => {
+						this.plugin.settings.generateBaseFile = value;
+						await this.plugin.saveSettings();
+						if (value) {
+							await this.plugin.refreshBase();
+						}
+					})
+			);
+
+		new Setting(containerEl)
+			.setName("Base File Name")
+			.setDesc("Name of the .base file (without extension)")
+			.addText((text) =>
+				text
+					.setPlaceholder("2. Books Database")
+					.setValue(this.plugin.settings.baseFileName)
+					.onChange(async (value) => {
+						this.plugin.settings.baseFileName = value || "2. Books Database";
+						await this.plugin.saveSettings();
+						if (this.plugin.settings.generateBaseFile) {
+							await this.plugin.refreshBase();
+						}
+					})
+			);
+
 		containerEl.createEl("h2", { text: "Support" });
 
 		new Setting(containerEl)

@@ -43,6 +43,8 @@ var DEFAULT_SETTINGS = {
   showNotes: true,
   showIndex: true,
   indexNoteTitle: "1. Library Index",
+  generateBaseFile: true,
+  baseFileName: "2. Books Database",
   showCoverCollage: true,
   coverCollageLimit: 0,
   // 0 = show all
@@ -227,6 +229,27 @@ var MoonSyncSettingTab = class extends import_obsidian.PluginSettingTab {
         this.plugin.settings.coverCollageSort = value;
         await this.plugin.saveSettings();
         await this.plugin.refreshIndex();
+      })
+    );
+    const basesHeader = containerEl.createEl("h2", { text: "Obsidian Bases" });
+    basesHeader.createSpan({ text: "\xA0\xA0\xA0\xA0\xA0\xA0" });
+    basesHeader.createSpan({ text: "Auto-generate database view configuration for the Bases plugin.", cls: "setting-item-description" });
+    new import_obsidian.Setting(containerEl).setName("Generate Base File").setDesc("Automatically create and update the .base file for the Obsidian Bases plugin").addToggle(
+      (toggle) => toggle.setValue(this.plugin.settings.generateBaseFile).onChange(async (value) => {
+        this.plugin.settings.generateBaseFile = value;
+        await this.plugin.saveSettings();
+        if (value) {
+          await this.plugin.refreshBase();
+        }
+      })
+    );
+    new import_obsidian.Setting(containerEl).setName("Base File Name").setDesc("Name of the .base file (without extension)").addText(
+      (text) => text.setPlaceholder("2. Books Database").setValue(this.plugin.settings.baseFileName).onChange(async (value) => {
+        this.plugin.settings.baseFileName = value || "2. Books Database";
+        await this.plugin.saveSettings();
+        if (this.plugin.settings.generateBaseFile) {
+          await this.plugin.refreshBase();
+        }
       })
     );
     containerEl.createEl("h2", { text: "Support" });
@@ -817,6 +840,89 @@ function generateIndexNote(books, settings) {
   lines.push("");
   return lines.join("\n");
 }
+function generateBaseFile(settings) {
+  const outputFolder = settings.outputFolder;
+  const indexTitle = settings.indexNoteTitle;
+  const baseTitle = settings.baseFileName;
+  const lines = [];
+  lines.push("filters:");
+  lines.push("  and:");
+  lines.push(`    - file.folder == "${outputFolder}"`);
+  lines.push(`    - file.name != "${indexTitle}"`);
+  lines.push(`    - file.name != "${baseTitle}"`);
+  lines.push('    - file.ext == "md"');
+  lines.push("properties:");
+  lines.push("  file.name:");
+  lines.push("    displayName: Title");
+  lines.push("  author:");
+  lines.push("    displayName: Author");
+  lines.push("  genres:");
+  lines.push("    displayName: Genres");
+  lines.push("  published_date:");
+  lines.push("    displayName: Published");
+  lines.push("  page_count:");
+  lines.push("    displayName: Pages");
+  lines.push("  highlights_count:");
+  lines.push("    displayName: Highlights");
+  lines.push("  notes_count:");
+  lines.push("    displayName: Notes");
+  lines.push("  last_synced:");
+  lines.push("    displayName: Last Synced");
+  lines.push("  publisher:");
+  lines.push("    displayName: Publisher");
+  lines.push("  series:");
+  lines.push("    displayName: Series");
+  lines.push("  language:");
+  lines.push("    displayName: Language");
+  lines.push("  progress:");
+  lines.push("    displayName: Progress %");
+  lines.push("  manual_note:");
+  lines.push("    displayName: Manual");
+  lines.push("views:");
+  lines.push("  - type: table");
+  lines.push("    name: Library");
+  lines.push("    order:");
+  lines.push("      - file.name");
+  lines.push("      - author");
+  lines.push("      - highlights_count");
+  lines.push("      - progress");
+  lines.push("      - notes_count");
+  lines.push("      - manual_note");
+  lines.push("      - last_synced");
+  lines.push("      - genres");
+  lines.push("      - page_count");
+  lines.push("      - publisher");
+  lines.push("      - published_date");
+  lines.push("      - language");
+  lines.push("    limit: 100");
+  lines.push("    properties:");
+  lines.push("      - file.name");
+  lines.push("      - note.author");
+  lines.push("      - note.genres");
+  lines.push("      - note.highlights_count");
+  lines.push("      - note.notes_count");
+  lines.push("      - note.progress");
+  lines.push("      - note.manual_note");
+  lines.push("      - note.published_date");
+  lines.push("      - note.publisher");
+  lines.push("      - note.page_count");
+  lines.push("      - note.series");
+  lines.push("      - note.language");
+  lines.push("      - note.last_synced");
+  lines.push("  - type: cards");
+  lines.push("    name: Gallery");
+  lines.push("    order:");
+  lines.push("      - file.name");
+  lines.push("    limit: 100");
+  lines.push("    image: note.cover");
+  lines.push("    imageFit: contain");
+  lines.push("    cardSize: medium");
+  lines.push("    properties:");
+  lines.push("      - file.name");
+  lines.push("      - note.author");
+  lines.push("      - note.published_date");
+  return lines.join("\n");
+}
 
 // src/covers.ts
 var import_obsidian3 = require("obsidian");
@@ -1243,6 +1349,13 @@ async function syncFromMoonReader(app, settings, wasmPath) {
           }
         }
         await updateIndexNote(app, outputPath, booksWithHighlights, settings);
+      }
+    }
+    if (settings.generateBaseFile) {
+      const baseFilePath = (0, import_obsidian6.normalizePath)(`${outputPath}/${settings.baseFileName}.base`);
+      const baseExists = await app.vault.adapter.exists(baseFilePath);
+      if (result.booksCreated > 0 || result.booksUpdated > 0 || !baseExists) {
+        await updateBaseFile(app, outputPath, settings);
       }
     }
     progressNotice.hide();
@@ -1708,6 +1821,33 @@ async function refreshIndexNote(app, settings) {
     new import_obsidian6.Notice("MoonSync: Failed to refresh index");
   }
 }
+async function updateBaseFile(app, outputPath, settings) {
+  const baseFilePath = (0, import_obsidian6.normalizePath)(`${outputPath}/${settings.baseFileName}.base`);
+  const content = generateBaseFile(settings);
+  if (await app.vault.adapter.exists(baseFilePath)) {
+    await app.vault.adapter.write(baseFilePath, content);
+  } else {
+    await app.vault.create(baseFilePath, content);
+  }
+}
+async function refreshBaseFile(app, settings) {
+  if (!settings.generateBaseFile) {
+    new import_obsidian6.Notice("MoonSync: Base file generation is disabled in settings");
+    return;
+  }
+  const outputPath = (0, import_obsidian6.normalizePath)(settings.outputFolder);
+  if (!await app.vault.adapter.exists(outputPath)) {
+    new import_obsidian6.Notice("MoonSync: Output folder does not exist");
+    return;
+  }
+  try {
+    await updateBaseFile(app, outputPath, settings);
+    new import_obsidian6.Notice("MoonSync: Base file refreshed");
+  } catch (error) {
+    console.error("MoonSync: Failed to refresh base file", error);
+    new import_obsidian6.Notice("MoonSync: Failed to refresh base file");
+  }
+}
 function showSyncResults(app, result) {
   if (result.success) {
     if (result.booksProcessed === 0) {
@@ -1912,6 +2052,12 @@ var MoonSyncPlugin = class extends import_obsidian7.Plugin {
       console.error("MoonSync: Failed to create book note", error);
       new import_obsidian7.Notice(`MoonSync: Failed to create book note - ${error}`);
     }
+  }
+  async refreshIndex() {
+    await refreshIndexNote(this.app, this.settings);
+  }
+  async refreshBase() {
+    await refreshBaseFile(this.app, this.settings);
   }
   async forceRefreshMetadata() {
     const notice = new import_obsidian7.Notice("Force refreshing metadata for all books...", 0);

@@ -288,3 +288,100 @@ export function generateIndexNote(books: BookData[], settings: MoonSyncSettings)
 
 	return lines.join("\n");
 }
+
+export function generateBaseFile(settings: MoonSyncSettings): string {
+	const outputFolder = settings.outputFolder;
+	const indexTitle = settings.indexNoteTitle;
+	const baseTitle = settings.baseFileName;
+
+	// Build YAML structure for Obsidian Bases plugin
+	const lines: string[] = [];
+
+	// Filters section - exclude index and database files
+	lines.push("filters:");
+	lines.push("  and:");
+	lines.push(`    - file.folder == "${outputFolder}"`);
+	lines.push(`    - file.name != "${indexTitle}"`);
+	lines.push(`    - file.name != "${baseTitle}"`);
+	lines.push('    - file.ext == "md"');
+
+	// Properties section - define all frontmatter fields with display names
+	lines.push("properties:");
+	lines.push("  file.name:");
+	lines.push("    displayName: Title");
+	lines.push("  author:");
+	lines.push("    displayName: Author");
+	lines.push("  genres:");
+	lines.push("    displayName: Genres");
+	lines.push("  published_date:");
+	lines.push("    displayName: Published");
+	lines.push("  page_count:");
+	lines.push("    displayName: Pages");
+	lines.push("  highlights_count:");
+	lines.push("    displayName: Highlights");
+	lines.push("  notes_count:");
+	lines.push("    displayName: Notes");
+	lines.push("  last_synced:");
+	lines.push("    displayName: Last Synced");
+	lines.push("  publisher:");
+	lines.push("    displayName: Publisher");
+	lines.push("  series:");
+	lines.push("    displayName: Series");
+	lines.push("  language:");
+	lines.push("    displayName: Language");
+	lines.push("  progress:");
+	lines.push("    displayName: Progress %");
+	lines.push("  manual_note:");
+	lines.push("    displayName: Manual");
+
+	// Views section - configure table and gallery views
+	lines.push("views:");
+
+	// Table view
+	lines.push("  - type: table");
+	lines.push("    name: Library");
+	lines.push("    order:");
+	lines.push("      - file.name");
+	lines.push("      - author");
+	lines.push("      - highlights_count");
+	lines.push("      - progress");
+	lines.push("      - notes_count");
+	lines.push("      - manual_note");
+	lines.push("      - last_synced");
+	lines.push("      - genres");
+	lines.push("      - page_count");
+	lines.push("      - publisher");
+	lines.push("      - published_date");
+	lines.push("      - language");
+	lines.push("    limit: 100");
+	lines.push("    properties:");
+	lines.push("      - file.name");
+	lines.push("      - note.author");
+	lines.push("      - note.genres");
+	lines.push("      - note.highlights_count");
+	lines.push("      - note.notes_count");
+	lines.push("      - note.progress");
+	lines.push("      - note.manual_note");
+	lines.push("      - note.published_date");
+	lines.push("      - note.publisher");
+	lines.push("      - note.page_count");
+	lines.push("      - note.series");
+	lines.push("      - note.language");
+	lines.push("      - note.last_synced");
+
+	// Gallery/Cards view
+	lines.push("  - type: cards");
+	lines.push("    name: Gallery");
+	lines.push("    order:");
+	lines.push("      - file.name");
+	lines.push("    limit: 100");
+	lines.push("    image: note.cover");
+	lines.push("    imageFit: contain");
+	lines.push("    cardSize: medium");
+	lines.push("    properties:");
+	lines.push("      - file.name");
+	lines.push("      - note.author");
+	lines.push("      - note.published_date");
+
+	return lines.join("\n");
+}

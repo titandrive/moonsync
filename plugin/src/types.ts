@@ -67,6 +67,8 @@ export interface MoonSyncSettings {
 	showNotes: boolean;
 	showIndex: boolean;
 	indexNoteTitle: string;
+	generateBaseFile: boolean;
+	baseFileName: string;
 	showCoverCollage: boolean;
 	coverCollageLimit: number; // 0 = all
 	coverCollageSort: "alpha" | "recent";
@@ -85,6 +87,8 @@ export const DEFAULT_SETTINGS: MoonSyncSettings = {
 	showNotes: true,
 	showIndex: true,
 	indexNoteTitle: "1. Library Index",
+	generateBaseFile: true,
+	baseFileName: "2. Books Database",
 	showCoverCollage: true,
 	coverCollageLimit: 0, // 0 = show all
 	coverCollageSort: "alpha",

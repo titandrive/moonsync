@@ -1,7 +1,7 @@
 import { Plugin, Notice, setIcon, normalizePath } from "obsidian";
 import { MoonSyncSettings, DEFAULT_SETTINGS } from "./src/types";
 import { MoonSyncSettingTab } from "./src/settings";
-import { syncFromMoonReader, showSyncResults, refreshIndexNote } from "./src/sync";
+import { syncFromMoonReader, showSyncResults, refreshIndexNote, refreshBaseFile } from "./src/sync";
 import { CreateBookModal, generateBookTemplate } from "./src/modal";
 import { generateFilename } from "./src/writer/markdown";
 import { fetchBookInfo, downloadCover } from "./src/covers";
@@ -234,6 +234,14 @@ export default class MoonSyncPlugin extends Plugin {
 			console.error("MoonSync: Failed to create book note", error);
 			new Notice(`MoonSync: Failed to create book note - ${error}`);
 		}
+	}
+
+	async refreshIndex(): Promise<void> {
+		await refreshIndexNote(this.app, this.settings);
+	}
+
+	async refreshBase(): Promise<void> {
+		await refreshBaseFile(this.app, this.settings);
 	}
 
 	async forceRefreshMetadata(): Promise<void> {

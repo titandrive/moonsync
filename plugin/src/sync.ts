@@ -1,7 +1,7 @@
 import { App, Notice, normalizePath } from "obsidian";
 import { SyncSummaryModal } from "./modal";
 import { parseAnnotationFiles } from "./parser/annotations";
-import { generateBookNote, generateFilename, generateIndexNote, formatHighlight } from "./writer/markdown";
+import { generateBookNote, generateFilename, generateIndexNote, generateBaseFile, formatHighlight } from "./writer/markdown";
 import { fetchBookInfo, downloadCover, BookInfoResult } from "./covers";
 import { MoonSyncSettings, BookData } from "./types";
 import { loadCache, saveCache, getCachedInfo, setCachedInfo, BookInfoCache } from "./cache";
@@ -151,6 +151,17 @@ export async function syncFromMoonReader(
 					}
 				}
 				await updateIndexNote(app, outputPath, booksWithHighlights, settings);
+			}
+		}
+
+		// Update base file if enabled
+		if (settings.generateBaseFile) {
+			const baseFilePath = normalizePath(`${outputPath}/${settings.baseFileName}.base`);
+			const baseExists = await app.vault.adapter.exists(baseFilePath);
+
+			// Regenerate if: books changed or file doesn't exist
+			if (result.booksCreated > 0 || result.booksUpdated > 0 || !baseExists) {
+				await updateBaseFile(app, outputPath, settings);
 			}
 		}
 
@@ -896,6 +907,43 @@ export async function refreshIndexNote(app: App, settings: MoonSyncSettings): Pr
 	} catch (error) {
 		console.error("MoonSync: Failed to refresh index", error);
 		new Notice("MoonSync: Failed to refresh index");
+	}
+}
+
+async function updateBaseFile(app: App, outputPath: string, settings: MoonSyncSettings): Promise<void> {
+	const baseFilePath = normalizePath(`${outputPath}/${settings.baseFileName}.base`);
+	const content = generateBaseFile(settings);
+
+	if (await app.vault.adapter.exists(baseFilePath)) {
+		await app.vault.adapter.write(baseFilePath, content);
+	} else {
+		await app.vault.create(baseFilePath, content);
+	}
+}
+
+/**
+ * Refresh the base file (for settings changes)
+ */
+export async function refreshBaseFile(app: App, settings: MoonSyncSettings): Promise<void> {
+	if (!settings.generateBaseFile) {
+		new Notice("MoonSync: Base file generation is disabled in settings");
+		return;
+	}
+
+	const outputPath = normalizePath(settings.outputFolder);
+
+	// Check if output folder exists
+	if (!(await app.vault.adapter.exists(outputPath))) {
+		new Notice("MoonSync: Output folder does not exist");
+		return;
+	}
+
+	try {
+		await updateBaseFile(app, outputPath, settings);
+		new Notice("MoonSync: Base file refreshed");
+	} catch (error) {
+		console.error("MoonSync: Failed to refresh base file", error);
+		new Notice("MoonSync: Failed to refresh base file");
 	}
 }
 
