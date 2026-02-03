@@ -2,7 +2,7 @@ import { Plugin, Notice, setIcon, normalizePath, TFile } from "obsidian";
 import { MoonSyncSettings, DEFAULT_SETTINGS, BookData } from "./src/types";
 import { MoonSyncSettingTab } from "./src/settings";
 import { syncFromMoonReader, showSyncResults, refreshIndexNote, refreshBaseFile } from "./src/sync";
-import { CreateBookModal, generateBookTemplate } from "./src/modal";
+import { CreateBookModal, generateBookTemplate, SelectCoverModal } from "./src/modal";
 import { generateFilename, generateBookNote } from "./src/writer/markdown";
 import { fetchBookInfo, downloadCover } from "./src/covers";
 import { parseManualExport } from "./src/parser/manual-export";
@@ -47,6 +47,13 @@ export default class MoonSyncPlugin extends Plugin {
 			id: "force-refresh-metadata",
 			name: "Force Refresh All Metadata",
 			callback: () => this.forceRefreshMetadata(),
+		});
+
+		// Add re-fetch cover command
+		this.addCommand({
+			id: "refetch-cover",
+			name: "Re-fetch Book Cover",
+			callback: () => this.refetchBookCover(),
 		});
 
 		// Sync on startup if enabled
@@ -409,5 +416,130 @@ export default class MoonSyncPlugin extends Plugin {
 			console.error("MoonSync: Failed to import note", error);
 			new Notice(`MoonSync: Failed to import note - ${error}`);
 		}
+	}
+
+	/**
+	 * Re-fetch book cover for the current note
+	 */
+	async refetchBookCover(): Promise<void> {
+		const activeFile = this.app.workspace.getActiveFile();
+		if (!activeFile) {
+			new Notice("MoonSync: No active file");
+			return;
+		}
+
+		try {
+			// Read the file content to get title and author from frontmatter
+			const content = await this.app.vault.read(activeFile);
+
+			// Extract frontmatter
+			const frontmatterMatch = content.match(/^---\n([\s\S]*?)\n---/);
+			if (!frontmatterMatch) {
+				new Notice("MoonSync: This file doesn't have frontmatter");
+				return;
+			}
+
+			const frontmatter = frontmatterMatch[1];
+
+			// Extract title and author
+			const titleMatch = frontmatter.match(/^title:\s*"?([^"\n]+)"?/m);
+			const authorMatch = frontmatter.match(/^author:\s*"?([^"\n]+)"?/m);
+
+			if (!titleMatch) {
+				new Notice("MoonSync: No title found in frontmatter");
+				return;
+			}
+
+			const title = titleMatch[1].trim().replace(/\\"/g, '"');
+			const author = authorMatch ? authorMatch[1].trim().replace(/\\"/g, '"') : "";
+
+			// Open cover selection modal
+			new SelectCoverModal(
+				this.app,
+				title,
+				author,
+				async (coverUrl: string) => {
+					const progressNotice = new Notice("MoonSync: Downloading cover...", 0);
+
+					try {
+						// Download and save cover
+						const outputPath = normalizePath(this.settings.outputFolder);
+						const coversFolder = normalizePath(`${outputPath}/covers`);
+
+						// Ensure covers folder exists
+						if (!(await this.app.vault.adapter.exists(coversFolder))) {
+							await this.app.vault.createFolder(coversFolder);
+						}
+
+						const filename = generateFilename(title);
+						const coverFilename = `${filename}.jpg`;
+						const coverFilePath = normalizePath(`${coversFolder}/${coverFilename}`);
+
+						const imageData = await downloadCover(coverUrl);
+						if (!imageData) {
+							progressNotice.hide();
+							new Notice("MoonSync: Failed to download cover image");
+							return;
+						}
+
+						// Save the cover
+						await this.app.vault.adapter.writeBinary(coverFilePath, imageData);
+
+						// Update frontmatter with new cover path
+						const coverPath = `covers/${coverFilename}`;
+						const updatedContent = this.updateFrontmatterCover(content, coverPath);
+
+						// Write back to file
+						await this.app.vault.modify(activeFile, updatedContent);
+
+						progressNotice.hide();
+						new Notice("MoonSync: Cover updated successfully");
+					} catch (error) {
+						progressNotice.hide();
+						console.error("MoonSync: Failed to download cover", error);
+						new Notice(`MoonSync: Failed to download cover - ${error}`);
+					}
+				}
+			).open();
+		} catch (error) {
+			console.error("MoonSync: Failed to re-fetch cover", error);
+			new Notice(`MoonSync: Failed to re-fetch cover - ${error}`);
+		}
+	}
+
+	/**
+	 * Update the cover field in frontmatter
+	 */
+	private updateFrontmatterCover(content: string, coverPath: string): string {
+		const frontmatterMatch = content.match(/^---\n([\s\S]*?)\n---/);
+		if (!frontmatterMatch) {
+			return content;
+		}
+
+		const frontmatter = frontmatterMatch[1];
+		const contentAfterFrontmatter = content.slice(frontmatterMatch[0].length);
+
+		const lines: string[] = [];
+		lines.push("---");
+
+		// Process existing frontmatter lines
+		let coverUpdated = false;
+		for (const line of frontmatter.split("\n")) {
+			if (line.startsWith("cover:")) {
+				lines.push(`cover: "${coverPath}"`);
+				coverUpdated = true;
+			} else {
+				lines.push(line);
+			}
+		}
+
+		// Add cover field if it didn't exist
+		if (!coverUpdated) {
+			lines.push(`cover: "${coverPath}"`);
+		}
+
+		lines.push("---");
+
+		return lines.join("\n") + contentAfterFrontmatter;
 	}
 }

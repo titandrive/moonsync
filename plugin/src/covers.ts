@@ -311,6 +311,108 @@ async function fetchFromGoogleBooks(
 }
 
 /**
+ * Fetch multiple book results with covers from both sources
+ * Returns up to maxResults from each source (default 5)
+ */
+export async function fetchMultipleBookCovers(
+	title: string,
+	author: string,
+	maxResults: number = 5
+): Promise<BookInfoResult[]> {
+	const results: BookInfoResult[] = [];
+
+	try {
+		// Fetch from Google Books (supports multiple results)
+		const googleQuery = encodeURIComponent(`intitle:${title} inauthor:${author}`);
+		const googleUrl = `https://www.googleapis.com/books/v1/volumes?q=${googleQuery}&maxResults=${maxResults}`;
+
+		const googleResponse = await requestUrl({ url: googleUrl });
+		const googleData = googleResponse.json;
+
+		if (googleData.items && googleData.items.length > 0) {
+			for (const book of googleData.items) {
+				const volumeInfo = book.volumeInfo;
+				const imageLinks = volumeInfo?.imageLinks;
+
+				// Only include books with covers
+				if (imageLinks) {
+					const coverUrl = (
+						imageLinks.large ||
+						imageLinks.medium ||
+						imageLinks.thumbnail ||
+						imageLinks.smallThumbnail
+					)?.replace("http://", "https://");
+
+					if (coverUrl) {
+						results.push({
+							title: volumeInfo?.title || null,
+							author: volumeInfo?.authors?.[0] || null,
+							coverUrl,
+							description: volumeInfo?.description || null,
+							source: "googlebooks",
+							publishedDate: volumeInfo?.publishedDate || null,
+							publisher: volumeInfo?.publisher || null,
+							pageCount: volumeInfo?.pageCount || null,
+							genres: volumeInfo?.categories || null,
+							series: null,
+							language: volumeInfo?.language || null
+						});
+					}
+				}
+			}
+		}
+	} catch (error) {
+		console.log("MoonSync: Google Books search failed", error);
+	}
+
+	try {
+		// Fetch from Open Library (limit parameter)
+		const olQuery = encodeURIComponent(`${title} ${author}`);
+		const olUrl = `https://openlibrary.org/search.json?q=${olQuery}&limit=${maxResults}`;
+
+		const olResponse = await requestUrl({ url: olUrl });
+		const olData = olResponse.json;
+
+		if (olData.docs && olData.docs.length > 0) {
+			for (const book of olData.docs) {
+				// Only include books with covers
+				let coverUrl: string | null = null;
+				if (book.cover_i) {
+					coverUrl = `https://covers.openlibrary.org/b/id/${book.cover_i}-L.jpg`;
+				} else if (book.isbn && book.isbn.length > 0) {
+					coverUrl = `https://covers.openlibrary.org/b/isbn/${book.isbn[0]}-L.jpg`;
+				}
+
+				if (coverUrl) {
+					results.push({
+						title: book.title || null,
+						author: book.author_name?.[0] || null,
+						coverUrl,
+						description: null, // Would need extra API call per book
+						source: "openlibrary",
+						publishedDate: book.first_publish_year?.toString() || null,
+						publisher: book.publisher?.[0] || null,
+						pageCount: book.number_of_pages_median || null,
+						genres: book.subject?.slice(0, 5) || null,
+						series: null,
+						language: book.language?.[0] || null
+					});
+				}
+			}
+		}
+	} catch (error) {
+		console.log("MoonSync: Open Library search failed", error);
+	}
+
+	// Remove duplicates based on cover URL
+	const uniqueResults = results.filter((result, index, self) =>
+		index === self.findIndex(r => r.coverUrl === result.coverUrl)
+	);
+
+	return uniqueResults;
+}
+
+/**
  * Download cover image and return as ArrayBuffer
  */
 export async function downloadCover(url: string): Promise<ArrayBuffer | null> {

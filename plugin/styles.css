@@ -137,3 +137,79 @@
 	padding-left: 0;
 	opacity: 0.8;
 }
+
+/* Cover selection modal */
+.moonsync-select-cover-modal {
+	width: 700px;
+	max-width: 90vw;
+}
+
+.moonsync-loading {
+	text-align: center;
+	padding: 2em;
+	color: var(--text-muted);
+}
+
+.moonsync-cover-grid {
+	display: grid;
+	grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
+	gap: 1em;
+	margin: 1.5em 0;
+	max-height: 60vh;
+	overflow-y: auto;
+}
+
+.moonsync-cover-item {
+	cursor: pointer;
+	border: 2px solid transparent;
+	border-radius: 8px;
+	padding: 0.5em;
+	transition: all 0.2s ease;
+	display: flex;
+	flex-direction: column;
+	align-items: center;
+}
+
+.moonsync-cover-item:hover {
+	border-color: var(--interactive-accent);
+	background: var(--background-modifier-hover);
+	transform: scale(1.02);
+}
+
+.moonsync-cover-item img {
+	width: 100%;
+	height: 200px;
+	object-fit: contain;
+	border-radius: 4px;
+	margin-bottom: 0.5em;
+}
+
+.moonsync-cover-info {
+	text-align: center;
+	width: 100%;
+}
+
+.moonsync-cover-title {
+	font-size: 0.85em;
+	font-weight: 500;
+	margin-bottom: 0.25em;
+	overflow: hidden;
+	text-overflow: ellipsis;
+	display: -webkit-box;
+	-webkit-line-clamp: 2;
+	-webkit-box-orient: vertical;
+}
+
+.moonsync-cover-author {
+	font-size: 0.75em;
+	color: var(--text-muted);
+	overflow: hidden;
+	text-overflow: ellipsis;
+	white-space: nowrap;
+}
+
+.moonsync-cover-year {
+	font-size: 0.7em;
+	color: var(--text-faint);
+	margin-top: 0.25em;
+}

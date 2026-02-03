@@ -2,7 +2,7 @@ import { App, Modal, Setting, Notice, normalizePath } from "obsidian";
 import { SyncResult } from "./sync";
 import { MoonSyncSettings } from "./types";
 import { generateFilename } from "./writer/markdown";
-import { fetchBookInfo, downloadCover } from "./covers";
+import { fetchBookInfo, downloadCover, fetchMultipleBookCovers, BookInfoResult } from "./covers";
 
 export class SyncSummaryModal extends Modal {
 	private result: SyncResult;
@@ -52,6 +52,191 @@ export class SyncSummaryModal extends Modal {
 		const item = container.createDiv({ cls: "moonsync-stat-item" });
 		item.createDiv({ cls: "moonsync-stat-value", text: value });
 		item.createDiv({ cls: "moonsync-stat-label", text: label });
+	}
+
+	onClose() {
+		const { contentEl } = this;
+		contentEl.empty();
+	}
+}
+
+/**
+ * Modal for specifying search query when re-fetching cover
+ */
+export class RefetchCoverModal extends Modal {
+	private onSubmit: (title: string, author: string) => void;
+
+	private title = "";
+	private author = "";
+
+	constructor(
+		app: App,
+		defaultTitle: string,
+		defaultAuthor: string,
+		onSubmit: (title: string, author: string) => void
+	) {
+		super(app);
+		this.title = defaultTitle;
+		this.author = defaultAuthor;
+		this.onSubmit = onSubmit;
+	}
+
+	onOpen() {
+		const { contentEl } = this;
+		contentEl.empty();
+		contentEl.addClass("moonsync-create-book-modal");
+
+		contentEl.createEl("h2", { text: "Re-fetch Book Cover" });
+		contentEl.createEl("p", {
+			text: "Edit the search query to find a different cover.",
+			cls: "setting-item-description"
+		});
+
+		new Setting(contentEl)
+			.setName("Title")
+			.setDesc("Book title to search for")
+			.addText((text) => {
+				text
+					.setPlaceholder("Enter book title")
+					.setValue(this.title)
+					.onChange((value) => {
+						this.title = value;
+					});
+				// Focus the title input
+				setTimeout(() => text.inputEl.focus(), 10);
+			});
+
+		new Setting(contentEl)
+			.setName("Author")
+			.setDesc("Author name (optional)")
+			.addText((text) =>
+				text
+					.setPlaceholder("Enter author name")
+					.setValue(this.author)
+					.onChange((value) => {
+						this.author = value;
+					})
+			);
+
+		// Buttons
+		const buttonContainer = contentEl.createDiv({ cls: "moonsync-button-container" });
+
+		const cancelButton = buttonContainer.createEl("button", { text: "Cancel" });
+		cancelButton.addEventListener("click", () => this.close());
+
+		const searchButton = buttonContainer.createEl("button", {
+			text: "Search & Update",
+			cls: "mod-cta",
+		});
+		searchButton.addEventListener("click", () => {
+			if (!this.title.trim()) {
+				new Notice("Please enter a book title");
+				return;
+			}
+			this.onSubmit(this.title.trim(), this.author.trim());
+			this.close();
+		});
+	}
+
+	onClose() {
+		const { contentEl } = this;
+		contentEl.empty();
+	}
+}
+
+/**
+ * Modal for selecting from multiple cover options
+ */
+export class SelectCoverModal extends Modal {
+	private title: string;
+	private author: string;
+	private onSelect: (coverUrl: string) => void;
+
+	constructor(
+		app: App,
+		title: string,
+		author: string,
+		onSelect: (coverUrl: string) => void
+	) {
+		super(app);
+		this.title = title;
+		this.author = author;
+		this.onSelect = onSelect;
+	}
+
+	async onOpen() {
+		const { contentEl } = this;
+		contentEl.empty();
+		contentEl.addClass("moonsync-select-cover-modal");
+
+		// Title
+		contentEl.createEl("h2", { text: "Select Book Cover" });
+		contentEl.createEl("p", {
+			text: `Searching for "${this.title}"${this.author ? ` by ${this.author}` : ""}...`,
+			cls: "setting-item-description"
+		});
+
+		// Loading indicator
+		const loadingEl = contentEl.createDiv({ cls: "moonsync-loading" });
+		loadingEl.setText("Searching for covers...");
+
+		// Fetch covers
+		const covers = await fetchMultipleBookCovers(this.title, this.author, 10);
+
+		// Remove loading indicator
+		loadingEl.remove();
+
+		if (covers.length === 0) {
+			contentEl.createEl("p", {
+				text: "No covers found. Try a different search query.",
+				cls: "setting-item-description"
+			});
+
+			const buttonContainer = contentEl.createDiv({ cls: "moonsync-button-container" });
+			const closeButton = buttonContainer.createEl("button", { text: "Close" });
+			closeButton.addEventListener("click", () => this.close());
+			return;
+		}
+
+		// Display covers in a grid
+		const gridContainer = contentEl.createDiv({ cls: "moonsync-cover-grid" });
+
+		for (const cover of covers) {
+			const coverItem = gridContainer.createDiv({ cls: "moonsync-cover-item" });
+
+			// Cover image
+			const img = coverItem.createEl("img", {
+				attr: {
+					src: cover.coverUrl || "",
+					alt: cover.title || "Book cover"
+				}
+			});
+
+			// Book info
+			const info = coverItem.createDiv({ cls: "moonsync-cover-info" });
+			if (cover.title) {
+				info.createDiv({ cls: "moonsync-cover-title", text: cover.title });
+			}
+			if (cover.author) {
+				info.createDiv({ cls: "moonsync-cover-author", text: cover.author });
+			}
+			if (cover.publishedDate) {
+				info.createDiv({ cls: "moonsync-cover-year", text: cover.publishedDate });
+			}
+
+			// Click handler
+			coverItem.addEventListener("click", () => {
+				if (cover.coverUrl) {
+					this.onSelect(cover.coverUrl);
+					this.close();
+				}
+			});
+		}
+
+		// Cancel button
+		const buttonContainer = contentEl.createDiv({ cls: "moonsync-button-container" });
+		const cancelButton = buttonContainer.createEl("button", { text: "Cancel" });
+		cancelButton.addEventListener("click", () => this.close());
 	}
 
 	onClose() {
