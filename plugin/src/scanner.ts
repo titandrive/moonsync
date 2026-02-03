@@ -110,10 +110,14 @@ function parseFrontmatter(content: string, filePath: string): ScannedBook | null
  * Convert a scanned book to BookData format for use in index generation
  */
 export function scannedBookToBookData(scanned: ScannedBook): BookData {
+	// Extract the actual filename from the file path (without path and extension)
+	const filenameWithExt = scanned.filePath.split("/").pop() || "";
+	const actualFilename = filenameWithExt.replace(/\.md$/, "");
+
 	const book: MoonReaderBook = {
 		id: 0,
 		title: scanned.title,
-		filename: "",
+		filename: actualFilename, // Store actual filename for index links
 		author: scanned.author || "",
 		description: "",
 		category: "",
@@ -160,15 +164,30 @@ export function scannedBookToBookData(scanned: ScannedBook): BookData {
 
 /**
  * Merge Moon+ Reader books with scanned books, avoiding duplicates
- * Moon+ Reader books take precedence
+ * Moon+ Reader books take precedence, but we preserve actual filenames from disk
  */
 export function mergeBookLists(moonReaderBooks: BookData[], scannedBooks: ScannedBook[]): BookData[] {
 	const result = [...moonReaderBooks];
-	const moonReaderTitles = new Set(moonReaderBooks.map((b) => b.book.title.toLowerCase()));
 
-	// Add scanned books that aren't in Moon+ Reader
+	// Create a map of Moon+ Reader books by lowercase title for matching
+	const moonReaderMap = new Map<string, BookData>();
+	for (const book of result) {
+		moonReaderMap.set(book.book.title.toLowerCase(), book);
+	}
+
+	// Update Moon+ Reader books with actual filenames from scanned books
+	// and add scanned books that aren't in Moon+ Reader
 	for (const scanned of scannedBooks) {
-		if (!moonReaderTitles.has(scanned.title.toLowerCase())) {
+		const moonReaderBook = moonReaderMap.get(scanned.title.toLowerCase());
+
+		if (moonReaderBook) {
+			// This scanned book matches a Moon+ Reader book - update the filename
+			// Extract the actual filename from the file path
+			const filenameWithExt = scanned.filePath.split("/").pop() || "";
+			const actualFilename = filenameWithExt.replace(/\.md$/, "");
+			moonReaderBook.book.filename = actualFilename;
+		} else {
+			// This is a manual book not from Moon+ Reader - add it
 			result.push(scannedBookToBookData(scanned));
 		}
 	}
