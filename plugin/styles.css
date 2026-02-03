@@ -79,3 +79,61 @@
 .moonsync-create-book-modal .setting-item-control input {
 	width: 100%;
 }
+
+/* Settings tabs */
+.moonsync-tab-nav {
+	display: flex;
+	gap: 0.5em;
+	margin-bottom: 1.5em;
+	border-bottom: 1px solid var(--background-modifier-border);
+	padding-bottom: 0.5em;
+}
+
+.moonsync-tab-button {
+	background: none;
+	border: none;
+	padding: 0.5em 1em;
+	cursor: pointer;
+	color: var(--text-muted);
+	border-bottom: 2px solid transparent;
+	transition: all 0.2s ease;
+	font-size: 0.95em;
+	font-weight: 500;
+}
+
+.moonsync-tab-button:hover {
+	color: var(--text-normal);
+	background: var(--background-modifier-hover);
+	border-radius: 4px 4px 0 0;
+}
+
+.moonsync-tab-active {
+	color: var(--text-accent) !important;
+	border-bottom-color: var(--text-accent);
+}
+
+.moonsync-tab-content {
+	padding: 0.5em 0;
+}
+
+.moonsync-tab-visible {
+	display: block;
+}
+
+.moonsync-tab-hidden {
+	display: none;
+}
+
+.moonsync-tab-content h3 {
+	margin-left: 0;
+	padding-left: 0;
+}
+
+.moonsync-section-desc {
+	font-size: 0.9em;
+	color: var(--text-muted);
+	margin: -0.5em 0 1.5em 0;
+	margin-left: 0;
+	padding-left: 0;
+	opacity: 0.8;
+}

@@ -20,6 +20,7 @@ declare global {
 
 export class MoonSyncSettingTab extends PluginSettingTab {
 	plugin: MoonSyncPlugin;
+	private activeTab: string = "configuration";
 
 	constructor(app: App, plugin: MoonSyncPlugin) {
 		super(app, plugin);
@@ -32,24 +33,53 @@ export class MoonSyncSettingTab extends PluginSettingTab {
 
 		containerEl.createEl("h2", { text: "MoonSync Settings" });
 
-		containerEl.createEl("h3", { text: "About" });
+		// Create tab navigation
+		const tabNav = containerEl.createDiv({ cls: "moonsync-tab-nav" });
 
-		new Setting(containerEl)
-			.setName("Sync your Moon Reader highlights to Obsidian")
-			.setDesc("Book covers, descriptions, and ratings from Google Books/Open Library")
-			.addButton((button) =>
-				button.setButtonText("GitHub").onClick(() => {
-					window.open("https://github.com/titandrive/moonsync");
-				})
-			);
+		const tabs = [
+			{ id: "configuration", name: "Configuration" },
+			{ id: "content", name: "Content" },
+			{ id: "index-base", name: "Index & Base" },
+			{ id: "about", name: "About" }
+		];
 
-		const configHeader = containerEl.createEl("h2", { text: "Configuration" });
-		configHeader.createSpan({ text: "\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0" });
-		configHeader.createSpan({ text: "Set up MoonSync.", cls: "setting-item-description" });
+		tabs.forEach(tab => {
+			const tabButton = tabNav.createEl("button", {
+				text: tab.name,
+				cls: this.activeTab === tab.id ? "moonsync-tab-button moonsync-tab-active" : "moonsync-tab-button"
+			});
+			tabButton.addEventListener("click", () => {
+				this.activeTab = tab.id;
+				this.display();
+			});
+		});
+
+		// Create tab content containers
+		const configTab = containerEl.createDiv({ cls: this.activeTab === "configuration" ? "moonsync-tab-content moonsync-tab-visible" : "moonsync-tab-content moonsync-tab-hidden" });
+		const contentTab = containerEl.createDiv({ cls: this.activeTab === "content" ? "moonsync-tab-content moonsync-tab-visible" : "moonsync-tab-content moonsync-tab-hidden" });
+		const indexBaseTab = containerEl.createDiv({ cls: this.activeTab === "index-base" ? "moonsync-tab-content moonsync-tab-visible" : "moonsync-tab-content moonsync-tab-hidden" });
+		const aboutTab = containerEl.createDiv({ cls: this.activeTab === "about" ? "moonsync-tab-content moonsync-tab-visible" : "moonsync-tab-content moonsync-tab-hidden" });
+
+		// Configuration Tab
+		this.displayConfigurationTab(configTab);
+
+		// Content Tab
+		this.displayContentTab(contentTab);
+
+		// Index & Base Tab
+		this.displayIndexBaseTab(indexBaseTab);
+
+		// About Tab
+		this.displayAboutTab(aboutTab);
+	}
+
+	private displayConfigurationTab(container: HTMLElement): void {
+		container.createEl("h3", { text: "Configuration" });
+		container.createEl("p", { text: "Set up your Moon Reader backup location and note output folder.", cls: "moonsync-section-desc" });
 
 		let textComponent: TextComponent;
 
-		new Setting(containerEl)
+		new Setting(container)
 			.setName("Moon Reader Dropbox Path")
 			.setDesc(
 				"Path to your Books folder in Dropbox (usually Dropbox/Apps/Books). The plugin will find the hidden .Moon+ folder automatically."
@@ -75,7 +105,7 @@ export class MoonSyncSettingTab extends PluginSettingTab {
 				})
 			);
 
-		new Setting(containerEl)
+		new Setting(container)
 			.setName("Output Folder")
 			.setDesc("Folder in your vault where book notes will be created")
 			.addText((text) =>
@@ -88,11 +118,10 @@ export class MoonSyncSettingTab extends PluginSettingTab {
 					})
 			);
 
-		const syncHeader = containerEl.createEl("h2", { text: "Sync" });
-		syncHeader.createSpan({ text: "\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0" });
-		syncHeader.createSpan({ text: "Control how MoonSync works.", cls: "setting-item-description" });
+		container.createEl("h3", { text: "Sync", attr: { style: "margin-top: 2em;" } });
+		container.createEl("p", { text: "Control when and how MoonSync syncs your highlights.", cls: "moonsync-section-desc" });
 
-		new Setting(containerEl)
+		new Setting(container)
 			.setName("Sync Now")
 			.setDesc("Manually trigger a sync from Moon Reader")
 			.addButton((button) =>
@@ -101,7 +130,7 @@ export class MoonSyncSettingTab extends PluginSettingTab {
 				})
 			);
 
-		new Setting(containerEl)
+		new Setting(container)
 			.setName("Sync on Startup")
 			.setDesc("Automatically sync when Obsidian starts")
 			.addToggle((toggle) =>
@@ -113,7 +142,7 @@ export class MoonSyncSettingTab extends PluginSettingTab {
 					})
 			);
 
-		new Setting(containerEl)
+		new Setting(container)
 			.setName("Show Ribbon Icon")
 			.setDesc("Show sync button in ribbon menu")
 			.addToggle((toggle) =>
@@ -125,12 +154,13 @@ export class MoonSyncSettingTab extends PluginSettingTab {
 						this.plugin.updateRibbonIcon();
 					})
 			);
+	}
 
-		const noteHeader = containerEl.createEl("h2", { text: "Note Content" });
-		noteHeader.createSpan({ text: "\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0" });
-		noteHeader.createSpan({ text: "Control what data is included in book notes.", cls: "setting-item-description" });
+	private displayContentTab(container: HTMLElement): void {
+		container.createEl("h3", { text: "Note Content" });
+		container.createEl("p", { text: "Control what data is included in your book notes.", cls: "moonsync-section-desc" });
 
-		new Setting(containerEl)
+		new Setting(container)
 			.setName("Show Description")
 			.setDesc("Include book description in generated notes")
 			.addToggle((toggle) =>
@@ -142,7 +172,7 @@ export class MoonSyncSettingTab extends PluginSettingTab {
 					})
 			);
 
-		new Setting(containerEl)
+		new Setting(container)
 			.setName("Show Ratings")
 			.setDesc("Include Google Books rating in generated notes")
 			.addToggle((toggle) =>
@@ -154,7 +184,7 @@ export class MoonSyncSettingTab extends PluginSettingTab {
 					})
 			);
 
-		new Setting(containerEl)
+		new Setting(container)
 			.setName("Show Reading Progress")
 			.setDesc("Include reading progress section. Note: Progress data may not always be accurate depending on Moon Reader sync.")
 			.addToggle((toggle) =>
@@ -166,7 +196,7 @@ export class MoonSyncSettingTab extends PluginSettingTab {
 					})
 			);
 
-		new Setting(containerEl)
+		new Setting(container)
 			.setName("Show Highlight Colors")
 			.setDesc("Use different callout styles based on highlight color. When off, all highlights appear as quotes.")
 			.addToggle((toggle) =>
@@ -178,7 +208,7 @@ export class MoonSyncSettingTab extends PluginSettingTab {
 					})
 			);
 
-		new Setting(containerEl)
+		new Setting(container)
 			.setName("Fetch Book Covers")
 			.setDesc("Download book covers from Open Library/Google Books. Covers are saved in a 'covers' subfolder.")
 			.addToggle((toggle) =>
@@ -190,7 +220,7 @@ export class MoonSyncSettingTab extends PluginSettingTab {
 					})
 			);
 
-		new Setting(containerEl)
+		new Setting(container)
 			.setName("Show Notes")
 			.setDesc("Include your personal notes/annotations below highlights")
 			.addToggle((toggle) =>
@@ -201,12 +231,13 @@ export class MoonSyncSettingTab extends PluginSettingTab {
 						await this.plugin.saveSettings();
 					})
 			);
+	}
 
-		const indexHeader = containerEl.createEl("h2", { text: "Index" });
-		indexHeader.createSpan({ text: "\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0" });
-		indexHeader.createSpan({ text: "Control what is shown on the book index page.", cls: "setting-item-description" });
+	private displayIndexBaseTab(container: HTMLElement): void {
+		container.createEl("h3", { text: "Library Index" });
+		container.createEl("p", { text: "Configure the automatically generated index of all your books.", cls: "moonsync-section-desc" });
 
-		new Setting(containerEl)
+		new Setting(container)
 			.setName("Generate Library Index")
 			.setDesc("Create an index note with summary stats and links to all books")
 			.addToggle((toggle) =>
@@ -218,7 +249,7 @@ export class MoonSyncSettingTab extends PluginSettingTab {
 					})
 			);
 
-		new Setting(containerEl)
+		new Setting(container)
 			.setName("Index Note Title")
 			.setDesc("Name of the library index note")
 			.addText((text) =>
@@ -231,7 +262,7 @@ export class MoonSyncSettingTab extends PluginSettingTab {
 					})
 			);
 
-		new Setting(containerEl)
+		new Setting(container)
 			.setName("Show Cover Collage")
 			.setDesc("Display book covers at the top of the library index")
 			.addToggle((toggle) =>
@@ -244,7 +275,7 @@ export class MoonSyncSettingTab extends PluginSettingTab {
 					})
 			);
 
-		new Setting(containerEl)
+		new Setting(container)
 			.setName("Cover Collage Limit")
 			.setDesc("Maximum number of covers to show (0 = show all)")
 			.addText((text) =>
@@ -259,7 +290,7 @@ export class MoonSyncSettingTab extends PluginSettingTab {
 					})
 			);
 
-		new Setting(containerEl)
+		new Setting(container)
 			.setName("Cover Collage Sort")
 			.setDesc("How to sort covers in the collage")
 			.addDropdown((dropdown) =>
@@ -274,11 +305,10 @@ export class MoonSyncSettingTab extends PluginSettingTab {
 					})
 			);
 
-		const basesHeader = containerEl.createEl("h2", { text: "Obsidian Bases" });
-		basesHeader.createSpan({ text: "\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0" });
-		basesHeader.createSpan({ text: "Auto-generate database view configuration for the Bases plugin.", cls: "setting-item-description" });
+		container.createEl("h3", { text: "Obsidian Bases", attr: { style: "margin-top: 2em;" } });
+		container.createEl("p", { text: "Automatically generate a database configuration file for the Obsidian Bases plugin.", cls: "moonsync-section-desc" });
 
-		new Setting(containerEl)
+		new Setting(container)
 			.setName("Generate Base File")
 			.setDesc("Automatically create and update the .base file for the Obsidian Bases plugin")
 			.addToggle((toggle) =>
@@ -293,7 +323,7 @@ export class MoonSyncSettingTab extends PluginSettingTab {
 					})
 			);
 
-		new Setting(containerEl)
+		new Setting(container)
 			.setName("Base File Name")
 			.setDesc("Name of the .base file (without extension)")
 			.addText((text) =>
@@ -308,10 +338,23 @@ export class MoonSyncSettingTab extends PluginSettingTab {
 						}
 					})
 			);
+	}
 
-		containerEl.createEl("h2", { text: "Support" });
+	private displayAboutTab(container: HTMLElement): void {
+		container.createEl("h3", { text: "About MoonSync" });
 
-		new Setting(containerEl)
+		new Setting(container)
+			.setName("Sync your Moon Reader highlights to Obsidian")
+			.setDesc("Book covers, descriptions, and metadata from Google Books/Open Library")
+			.addButton((button) =>
+				button.setButtonText("GitHub").onClick(() => {
+					window.open("https://github.com/titandrive/moonsync");
+				})
+			);
+
+		container.createEl("h3", { text: "Support", attr: { style: "margin-top: 2em;" } });
+
+		new Setting(container)
 			.setName("Buy me a coffee")
 			.setDesc("If you find this plugin useful, consider supporting its development!")
 			.addButton((button) =>
@@ -319,7 +362,6 @@ export class MoonSyncSettingTab extends PluginSettingTab {
 					window.open("https://ko-fi.com/titandrive");
 				})
 			);
-
 	}
 
 	private async openFolderPicker(): Promise<string | null> {
