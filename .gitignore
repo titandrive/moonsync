@@ -1,9 +1,7 @@
 # Dependencies
 node_modules/
 
-# Build output
-main.js
-sql-wasm.wasm
+# Build output (commit for releases)
 
 # IDE
 .idea/
