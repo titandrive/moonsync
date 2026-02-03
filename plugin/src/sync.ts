@@ -1,7 +1,7 @@
 import { App, Notice, normalizePath } from "obsidian";
 import { SyncSummaryModal } from "./modal";
 import { parseAnnotationFiles } from "./parser/annotations";
-import { generateBookNote, generateFilename, generateIndexNote } from "./writer/markdown";
+import { generateBookNote, generateFilename, generateIndexNote, formatHighlight } from "./writer/markdown";
 import { fetchBookInfo, downloadCover } from "./covers";
 import { MoonSyncSettings, BookData } from "./types";
 import { loadCache, saveCache, getCachedInfo, setCachedInfo, BookInfoCache } from "./cache";
@@ -150,10 +150,12 @@ export async function syncFromMoonReader(
 interface ExistingBookData {
 	highlightsCount: number;
 	progress: number | null;
+	isManualNote: boolean;
+	fullContent?: string;
 }
 
 /**
- * Get highlights count and progress from an existing markdown file's frontmatter
+ * Get highlights count, progress, and manual note status from an existing markdown file
  */
 async function getExistingBookData(app: App, filePath: string): Promise<ExistingBookData | null> {
 	try {
@@ -165,17 +167,101 @@ async function getExistingBookData(app: App, filePath: string): Promise<Existing
 
 		const countMatch = content.match(/^highlights_count:\s*(\d+)/m);
 		const progressMatch = content.match(/^progress:\s*"?(\d+(?:\.\d+)?)/m);
+		const manualNoteMatch = content.match(/^manual_note:\s*true/m);
 
 		if (countMatch) {
 			return {
 				highlightsCount: parseInt(countMatch[1], 10),
 				progress: progressMatch ? parseFloat(progressMatch[1]) : null,
+				isManualNote: !!manualNoteMatch,
+				fullContent: content,
 			};
 		}
 	} catch {
 		// File doesn't exist or can't be read
 	}
 	return null;
+}
+
+/**
+ * Merge a manual note with Moon+ Reader data
+ * Preserves manual content and adds Moon+ Reader highlights section
+ */
+function mergeManualNoteWithMoonReader(
+	existingContent: string,
+	bookData: BookData,
+	settings: MoonSyncSettings
+): string {
+	const lines: string[] = [];
+
+	// Parse existing frontmatter and content
+	const frontmatterMatch = existingContent.match(/^---\n([\s\S]*?)\n---/);
+	const contentAfterFrontmatter = frontmatterMatch
+		? existingContent.slice(frontmatterMatch[0].length).trim()
+		: existingContent.trim();
+
+	// Start building new frontmatter
+	lines.push("---");
+
+	// Preserve existing frontmatter fields, update with Moon+ Reader data
+	if (frontmatterMatch) {
+		const frontmatter = frontmatterMatch[1];
+		const frontmatterLines = frontmatter.split("\n");
+
+		for (const line of frontmatterLines) {
+			// Skip fields that Moon+ Reader will update
+			if (line.startsWith("progress:") ||
+			    line.startsWith("current_chapter:") ||
+			    line.startsWith("highlights_count:") ||
+			    line.startsWith("last_synced:") ||
+			    line.startsWith("manual_note:")) {
+				continue;
+			}
+			lines.push(line);
+		}
+	}
+
+	// Add Moon+ Reader metadata
+	lines.push(`last_synced: ${new Date().toISOString().split("T")[0]}`);
+	lines.push(`highlights_count: ${bookData.highlights.length}`);
+
+	if (settings.showProgress && bookData.progress !== null) {
+		lines.push(`progress: "${bookData.progress.toFixed(1)}%"`);
+		if (bookData.currentChapter) {
+			lines.push(`current_chapter: ${bookData.currentChapter}`);
+		}
+	}
+
+	lines.push("---");
+	lines.push("");
+
+	// Add existing content
+	lines.push(contentAfterFrontmatter);
+	lines.push("");
+
+	// Add Moon+ Reader highlights section
+	lines.push("## Moon+ Reader Highlights");
+	lines.push("");
+
+	// Add progress info if enabled
+	if (settings.showReadingProgress && (bookData.progress !== null || bookData.currentChapter !== null)) {
+		lines.push("**Reading Progress:**");
+		if (bookData.progress !== null) {
+			lines.push(`- Progress: ${bookData.progress.toFixed(1)}%`);
+		}
+		if (bookData.currentChapter !== null) {
+			lines.push(`- Chapter: ${bookData.currentChapter}`);
+		}
+		lines.push("");
+	}
+
+	// Generate highlights
+	for (const highlight of bookData.highlights) {
+		lines.push(formatHighlight(highlight, settings.showHighlightColors, settings.showNotes));
+		lines.push("");
+	}
+
+	return lines.join("\n");
 }
 
 /**
@@ -298,7 +384,16 @@ async function processBook(
 		}
 	}
 
-	const markdown = generateBookNote(bookData, settings);
+	// Generate or merge markdown content
+	let markdown: string;
+
+	if (fileExists && existingData.isManualNote) {
+		// Merge manual note with Moon+ Reader data
+		markdown = mergeManualNoteWithMoonReader(existingData.fullContent!, bookData, settings);
+	} else {
+		// Generate new Moon+ Reader note
+		markdown = generateBookNote(bookData, settings);
+	}
 
 	if (fileExists) {
 		// Update existing file

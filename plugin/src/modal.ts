@@ -156,6 +156,7 @@ export function generateBookTemplate(
 	}
 	lines.push(`last_synced: ${new Date().toISOString().split("T")[0]}`);
 	lines.push("highlights_count: 0");
+	lines.push("manual_note: true");
 	if (rating !== null) {
 		lines.push(`rating: ${rating}`);
 		if (ratingsCount !== null) {

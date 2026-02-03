@@ -106,7 +106,7 @@ export function generateBookNote(bookData: BookData, settings: MoonSyncSettings)
 /**
  * Format a single highlight as an Obsidian callout
  */
-function formatHighlight(highlight: MoonReaderHighlight, useColors: boolean, showNotes: boolean): string {
+export function formatHighlight(highlight: MoonReaderHighlight, useColors: boolean, showNotes: boolean): string {
 	const calloutType = useColors ? getCalloutType(highlight.highlightColor) : "quote";
 	const dateStr = highlight.timestamp ? formatDate(highlight.timestamp) : "";
 	const chapterStr = highlight.chapter > 0 ? `Chapter ${highlight.chapter}` : "";
@@ -166,9 +166,11 @@ function escapeYaml(str: string): string {
 
 /**
  * Generate a safe filename from book title
+ * Case-insensitive to allow matching between manual notes and Moon+ Reader books
  */
 export function generateFilename(title: string): string {
 	return title
+		.toLowerCase() // Normalize case for matching
 		.replace(/[<>:"/\\|?*]/g, "") // Remove invalid filename characters
 		.replace(/\s+/g, " ") // Normalize whitespace
 		.trim()
