@@ -5,6 +5,7 @@ import { generateBookNote, generateFilename, generateIndexNote } from "./writer/
 import { fetchBookInfo, downloadCover } from "./covers";
 import { MoonSyncSettings, BookData } from "./types";
 import { loadCache, saveCache, getCachedInfo, setCachedInfo, BookInfoCache } from "./cache";
+import { scanAllBookNotes, mergeBookLists } from "./scanner";
 
 export interface SyncResult {
 	success: boolean;
@@ -12,6 +13,7 @@ export interface SyncResult {
 	booksCreated: number;
 	booksUpdated: number;
 	booksSkipped: number;
+	manualBooksAdded: number;
 	totalHighlights: number;
 	totalNotes: number;
 	isFirstSync: boolean;
@@ -32,6 +34,7 @@ export async function syncFromMoonReader(
 		booksCreated: 0,
 		booksUpdated: 0,
 		booksSkipped: 0,
+		manualBooksAdded: 0,
 		totalHighlights: 0,
 		totalNotes: 0,
 		isFirstSync: false,
@@ -99,11 +102,26 @@ export async function syncFromMoonReader(
 			await saveCache(app, outputPath, cache);
 		}
 
-		// Update index note if enabled and (books changed OR index doesn't exist)
+		// Update index note if enabled
 		if (settings.showIndex) {
 			const indexPath = normalizePath(`${outputPath}/${settings.indexNoteTitle}.md`);
 			const indexExists = await app.vault.adapter.exists(indexPath);
-			if (result.booksCreated > 0 || result.booksUpdated > 0 || !indexExists) {
+
+			// Check if there are manually-created book notes by comparing counts
+			const scannedBooks = await scanAllBookNotes(app, outputPath);
+			const indexFilename = `${settings.indexNoteTitle}.md`;
+			const filteredScanned = scannedBooks.filter((b) => !b.filePath.endsWith(indexFilename));
+			const totalBookNotes = filteredScanned.length;
+			const manualBookCount = totalBookNotes - booksWithHighlights.length;
+			const hasManualBooks = manualBookCount > 0;
+
+			// Track manual books for reporting
+			if (hasManualBooks) {
+				result.manualBooksAdded = manualBookCount;
+			}
+
+			// Regenerate if: books changed, index doesn't exist, or manual books detected
+			if (result.booksCreated > 0 || result.booksUpdated > 0 || !indexExists || hasManualBooks) {
 				// Populate cover paths for all books (for the collage)
 				const coversFolder = normalizePath(`${outputPath}/covers`);
 				for (const bookData of booksWithHighlights) {
@@ -297,10 +315,24 @@ async function processBook(
 
 /**
  * Update the index note with summary and links to all books
+ * Merges Moon+ Reader books with any manually-created book notes in the folder
  */
-async function updateIndexNote(app: App, outputPath: string, books: BookData[], settings: MoonSyncSettings): Promise<void> {
+async function updateIndexNote(app: App, outputPath: string, moonReaderBooks: BookData[], settings: MoonSyncSettings): Promise<void> {
 	const indexPath = normalizePath(`${outputPath}/${settings.indexNoteTitle}.md`);
-	const markdown = generateIndexNote(books, settings);
+
+	// Scan for manually-created book notes
+	const scannedBooks = await scanAllBookNotes(app, outputPath);
+
+	// Filter out the index note itself from scanned books
+	const indexFilename = `${settings.indexNoteTitle}.md`;
+	const filteredScanned = scannedBooks.filter(
+		(b) => !b.filePath.endsWith(indexFilename)
+	);
+
+	// Merge Moon+ Reader books with manually-created ones
+	const allBooks = mergeBookLists(moonReaderBooks, filteredScanned);
+
+	const markdown = generateIndexNote(allBooks, settings);
 
 	if (await app.vault.adapter.exists(indexPath)) {
 		await app.vault.adapter.write(indexPath, markdown);
@@ -310,25 +342,38 @@ async function updateIndexNote(app: App, outputPath: string, books: BookData[], 
 }
 
 /**
- * Refresh just the index note without full sync (for settings changes)
+ * Refresh just the index note without full sync (for settings changes or after adding manual books)
+ * This scans all book notes in the output folder, including manually-created ones
  */
 export async function refreshIndexNote(app: App, settings: MoonSyncSettings): Promise<void> {
-	if (!settings.showIndex || !settings.dropboxPath) {
+	if (!settings.showIndex) {
+		new Notice("MoonSync: Index generation is disabled in settings");
+		return;
+	}
+
+	const outputPath = normalizePath(settings.outputFolder);
+
+	// Check if output folder exists
+	if (!(await app.vault.adapter.exists(outputPath))) {
+		new Notice("MoonSync: Output folder does not exist");
 		return;
 	}
 
 	try {
-		// Parse annotation files to get book data
-		const booksWithHighlights = await parseAnnotationFiles(settings.dropboxPath);
-		if (booksWithHighlights.length === 0) {
-			return;
+		// Get Moon+ Reader books if dropbox is configured
+		let moonReaderBooks: BookData[] = [];
+		if (settings.dropboxPath) {
+			try {
+				moonReaderBooks = await parseAnnotationFiles(settings.dropboxPath);
+			} catch {
+				// Dropbox path might not be accessible, that's ok for manual-only use
+			}
 		}
 
-		const outputPath = normalizePath(settings.outputFolder);
 		const coversFolder = normalizePath(`${outputPath}/covers`);
 
-		// Populate cover paths for all books
-		for (const bookData of booksWithHighlights) {
+		// Populate cover paths for Moon+ Reader books
+		for (const bookData of moonReaderBooks) {
 			if (!bookData.coverPath) {
 				const coverFilename = `${generateFilename(bookData.book.title)}.jpg`;
 				const coverPath = normalizePath(`${coversFolder}/${coverFilename}`);
@@ -338,9 +383,11 @@ export async function refreshIndexNote(app: App, settings: MoonSyncSettings): Pr
 			}
 		}
 
-		await updateIndexNote(app, outputPath, booksWithHighlights, settings);
+		await updateIndexNote(app, outputPath, moonReaderBooks, settings);
+		new Notice("MoonSync: Index refreshed");
 	} catch (error) {
 		console.error("MoonSync: Failed to refresh index", error);
+		new Notice("MoonSync: Failed to refresh index");
 	}
 }
 
@@ -359,6 +406,7 @@ export function showSyncResults(app: App, result: SyncResult): void {
 			if (result.booksCreated > 0) parts.push(`${result.booksCreated} new`);
 			if (result.booksUpdated > 0) parts.push(`${result.booksUpdated} updated`);
 			if (result.booksSkipped > 0) parts.push(`${result.booksSkipped} unchanged`);
+			if (result.manualBooksAdded > 0) parts.push(`${result.manualBooksAdded} manual`);
 
 			new Notice(`MoonSync: ${parts.join(", ")}`);
 		}

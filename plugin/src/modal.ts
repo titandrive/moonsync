@@ -1,5 +1,8 @@
-import { App, Modal } from "obsidian";
+import { App, Modal, Setting, Notice, normalizePath } from "obsidian";
 import { SyncResult } from "./sync";
+import { MoonSyncSettings } from "./types";
+import { generateFilename } from "./writer/markdown";
+import { fetchBookInfo, downloadCover } from "./covers";
 
 export class SyncSummaryModal extends Modal {
 	private result: SyncResult;
@@ -55,4 +58,144 @@ export class SyncSummaryModal extends Modal {
 		const { contentEl } = this;
 		contentEl.empty();
 	}
+}
+
+/**
+ * Modal for creating a new book note
+ */
+export class CreateBookModal extends Modal {
+	private settings: MoonSyncSettings;
+	private onSubmit: (title: string, author: string) => void;
+
+	private title = "";
+	private author = "";
+
+	constructor(
+		app: App,
+		settings: MoonSyncSettings,
+		onSubmit: (title: string, author: string) => void
+	) {
+		super(app);
+		this.settings = settings;
+		this.onSubmit = onSubmit;
+	}
+
+	onOpen() {
+		const { contentEl } = this;
+		contentEl.empty();
+		contentEl.addClass("moonsync-create-book-modal");
+
+		contentEl.createEl("h2", { text: "Create Book Note" });
+
+		new Setting(contentEl)
+			.setName("Title")
+			.setDesc("Book title (required)")
+			.addText((text) =>
+				text
+					.setPlaceholder("Enter book title")
+					.onChange((value) => {
+						this.title = value;
+					})
+			);
+
+		new Setting(contentEl)
+			.setName("Author")
+			.setDesc("Author name (optional)")
+			.addText((text) =>
+				text
+					.setPlaceholder("Enter author name")
+					.onChange((value) => {
+						this.author = value;
+					})
+			);
+
+		// Buttons
+		const buttonContainer = contentEl.createDiv({ cls: "moonsync-button-container" });
+
+		const cancelButton = buttonContainer.createEl("button", { text: "Cancel" });
+		cancelButton.addEventListener("click", () => this.close());
+
+		const createButton = buttonContainer.createEl("button", {
+			text: "Create",
+			cls: "mod-cta",
+		});
+		createButton.addEventListener("click", () => {
+			if (!this.title.trim()) {
+				new Notice("Please enter a book title");
+				return;
+			}
+			this.onSubmit(this.title.trim(), this.author.trim());
+			this.close();
+		});
+	}
+
+	onClose() {
+		const { contentEl } = this;
+		contentEl.empty();
+	}
+}
+
+/**
+ * Generate a book note template
+ */
+export function generateBookTemplate(
+	title: string,
+	author: string,
+	coverPath: string | null,
+	description: string | null,
+	rating: number | null,
+	ratingsCount: number | null
+): string {
+	const lines: string[] = [];
+
+	// Frontmatter
+	lines.push("---");
+	lines.push(`title: "${title.replace(/"/g, '\\"')}"`);
+	if (author) {
+		lines.push(`author: "${author.replace(/"/g, '\\"')}"`);
+	}
+	lines.push(`last_synced: ${new Date().toISOString().split("T")[0]}`);
+	lines.push("highlights_count: 0");
+	if (rating !== null) {
+		lines.push(`rating: ${rating}`);
+		if (ratingsCount !== null) {
+			lines.push(`ratings_count: ${ratingsCount}`);
+		}
+	}
+	if (coverPath) {
+		lines.push(`cover: "${coverPath}"`);
+	}
+	lines.push("---");
+
+	// Content
+	lines.push(`# ${title}`);
+	if (author) {
+		lines.push(`**Author:** ${author}`);
+	}
+	if (rating !== null) {
+		const ratingText = ratingsCount !== null
+			? `**Rating:** ⭐ ${rating}/5 (${ratingsCount.toLocaleString()} ratings)`
+			: `**Rating:** ⭐ ${rating}/5`;
+		lines.push(ratingText);
+	}
+	lines.push("");
+
+	if (coverPath) {
+		lines.push(`![[${coverPath}|200]]`);
+		lines.push("");
+	}
+
+	if (description) {
+		lines.push("## Description");
+		lines.push(description);
+		lines.push("");
+	}
+
+	lines.push("## Highlights");
+	lines.push("");
+	lines.push("> [!quote]");
+	lines.push("> Add your highlights here...");
+	lines.push("");
+
+	return lines.join("\n");
 }

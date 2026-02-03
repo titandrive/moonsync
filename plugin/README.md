@@ -58,13 +58,23 @@ Vault folder where book notes are created. Defaults to `Books`.
 
 ### Sync
 
-**Sync Now** - Manually trigger a sync. Creates or updates notes for all books with highlights.
+**Sync Now** - Manually trigger a sync. Creates or updates notes for all books with highlights. Also detects any manually-created book notes and includes them in the library index.
 
 **Sync on Startup** - Automatically sync when Obsidian starts.
 
 **Show Ribbon Icon** - Show sync button in ribbon menu.
 
 On your first sync, a summary modal shows your import stats (books, notes, highlights) with a link to MoonSync settings.
+
+### Create Book Note
+
+**Create Book Note** - Create a new book note without Moon+ Reader. Enter a title and optionally an author, and MoonSync will:
+- Search Google Books/Open Library for the book
+- Fetch the cover image and description automatically
+- Create a formatted book note ready for your own highlights
+- Add the book to your library index
+
+This lets you track books you're reading outside Moon+ Reader in the same library.
 
 ### Note Content
 
@@ -86,7 +96,7 @@ On your first sync, a summary modal shows your import stats (books, notes, highl
 
 ### Index
 
-**Generate Library Index** - Create an index note with summary stats, cover collage, and links to all books.
+**Generate Library Index** - Create an index note with summary stats, cover collage, and links to all books. The index includes both Moon+ Reader books and any manually-created book notes in the output folder.
 
 **Index Note Title** - Customize the name of the library index note. Defaults to `1. Library Index`.
 

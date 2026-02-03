@@ -50,9 +50,32 @@
 
 .moonsync-button-container {
 	margin-top: 1em;
+	display: flex;
+	gap: 0.5em;
+	justify-content: flex-end;
 }
 
 .moonsync-button-container button {
 	padding: 0.5em 2em;
 }
 
+/* Create book modal */
+.moonsync-create-book-modal {
+	padding: 0.5em;
+}
+
+.moonsync-create-book-modal h2 {
+	margin-bottom: 1em;
+}
+
+.moonsync-create-book-modal .setting-item {
+	border-top: none;
+}
+
+.moonsync-create-book-modal .setting-item-info {
+	flex: 0 0 80px;
+}
+
+.moonsync-create-book-modal .setting-item-control input {
+	width: 100%;
+}

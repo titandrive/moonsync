@@ -1,7 +1,10 @@
-import { Plugin, Notice, setIcon } from "obsidian";
+import { Plugin, Notice, setIcon, normalizePath } from "obsidian";
 import { MoonSyncSettings, DEFAULT_SETTINGS } from "./src/types";
 import { MoonSyncSettingTab } from "./src/settings";
 import { syncFromMoonReader, showSyncResults, refreshIndexNote } from "./src/sync";
+import { CreateBookModal, generateBookTemplate } from "./src/modal";
+import { generateFilename } from "./src/writer/markdown";
+import { fetchBookInfo, downloadCover } from "./src/covers";
 import { join } from "path";
 
 export default class MoonSyncPlugin extends Plugin {
@@ -22,6 +25,13 @@ export default class MoonSyncPlugin extends Plugin {
 			id: "sync-now",
 			name: "Sync Now",
 			callback: () => this.runSync(),
+		});
+
+		// Add create book note command
+		this.addCommand({
+			id: "create-book-note",
+			name: "Create Book Note",
+			callback: () => this.openCreateBookModal(),
 		});
 
 		// Sync on startup if enabled
@@ -93,7 +103,111 @@ export default class MoonSyncPlugin extends Plugin {
 		await this.saveData(this.settings);
 	}
 
-	async refreshIndex(): Promise<void> {
-		await refreshIndexNote(this.app, this.settings);
+	/**
+	 * Open the modal to create a new book note
+	 */
+	openCreateBookModal(): void {
+		new CreateBookModal(
+			this.app,
+			this.settings,
+			async (title: string, author: string) => {
+				await this.createBookNote(title, author);
+			}
+		).open();
+	}
+
+	/**
+	 * Create a new book note with the given title and author
+	 */
+	async createBookNote(title: string, author: string): Promise<void> {
+		const progressNotice = new Notice("MoonSync: Creating book note...", 0);
+
+		try {
+			const outputPath = normalizePath(this.settings.outputFolder);
+			const filename = generateFilename(title);
+			const filePath = normalizePath(`${outputPath}/${filename}.md`);
+
+			// Check if note already exists
+			if (await this.app.vault.adapter.exists(filePath)) {
+				progressNotice.hide();
+				new Notice(`MoonSync: A note for "${title}" already exists`);
+				return;
+			}
+
+			// Ensure output folder exists
+			if (!(await this.app.vault.adapter.exists(outputPath))) {
+				await this.app.vault.createFolder(outputPath);
+			}
+
+			// Fetch book info (cover, description, rating)
+			let coverPath: string | null = null;
+			let description: string | null = null;
+			let rating: number | null = null;
+			let ratingsCount: number | null = null;
+			let fetchedAuthor: string | null = null;
+
+			if (this.settings.fetchCovers || this.settings.showDescription || this.settings.showRatings) {
+				try {
+					const bookInfo = await fetchBookInfo(title, author);
+
+					// Save cover if enabled
+					if (this.settings.fetchCovers && bookInfo.coverUrl) {
+						const coversFolder = normalizePath(`${outputPath}/covers`);
+						if (!(await this.app.vault.adapter.exists(coversFolder))) {
+							await this.app.vault.createFolder(coversFolder);
+						}
+
+						const coverFilename = `${filename}.jpg`;
+						const coverFilePath = normalizePath(`${coversFolder}/${coverFilename}`);
+						const imageData = await downloadCover(bookInfo.coverUrl);
+						if (imageData) {
+							await this.app.vault.adapter.writeBinary(coverFilePath, imageData);
+							coverPath = `covers/${coverFilename}`;
+						}
+					}
+
+					description = bookInfo.description;
+					rating = bookInfo.rating;
+					ratingsCount = bookInfo.ratingsCount;
+					fetchedAuthor = bookInfo.author;
+				} catch (error) {
+					console.log(`MoonSync: Failed to fetch book info for "${title}"`, error);
+				}
+			}
+
+			// Use fetched author if none provided
+			const finalAuthor = author || fetchedAuthor || "";
+
+			// Generate the note content
+			const content = generateBookTemplate(
+				title,
+				finalAuthor,
+				coverPath,
+				this.settings.showDescription ? description : null,
+				this.settings.showRatings ? rating : null,
+				this.settings.showRatings ? ratingsCount : null
+			);
+
+			// Create the file
+			await this.app.vault.create(filePath, content);
+
+			progressNotice.hide();
+			new Notice(`MoonSync: Created note for "${title}"`);
+
+			// Refresh the index to include the new book
+			if (this.settings.showIndex) {
+				await refreshIndexNote(this.app, this.settings);
+			}
+
+			// Open the newly created file
+			const file = this.app.vault.getAbstractFileByPath(filePath);
+			if (file) {
+				await this.app.workspace.openLinkText(filePath, "", true);
+			}
+		} catch (error) {
+			progressNotice.hide();
+			console.error("MoonSync: Failed to create book note", error);
+			new Notice(`MoonSync: Failed to create book note - ${error}`);
+		}
 	}
 }
