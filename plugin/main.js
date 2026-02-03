@@ -1900,6 +1900,64 @@ function showSyncResults(app, result) {
   }
 }
 
+// src/parser/manual-export.ts
+function parseManualExport(content) {
+  const lines = content.split("\n");
+  if (lines.length === 0) {
+    return null;
+  }
+  const headerMatch = lines[0].match(/^(.+?)\s+-\s+(.+?)\s+\(Highlight:\s+\d+;\s+Note:\s+\d+\)$/);
+  if (!headerMatch) {
+    return null;
+  }
+  const title = headerMatch[1].trim();
+  const author = headerMatch[2].trim();
+  const highlights = [];
+  let currentChapter = 0;
+  let chapterName = "";
+  for (let i = 1; i < lines.length; i++) {
+    const line = lines[i].trim();
+    if (!line || line.startsWith("\u2500\u2500\u2500")) {
+      continue;
+    }
+    if (line.startsWith("\u25C6")) {
+      chapterName = line.substring(1).trim();
+      const chapterMatch = chapterName.match(/Chapter\s+(\d+)/i);
+      if (chapterMatch) {
+        currentChapter = parseInt(chapterMatch[1]);
+      } else {
+        currentChapter++;
+      }
+      continue;
+    }
+    if (line.startsWith("\u25AA")) {
+      let highlightText = line.substring(1).trim();
+      let noteText = "";
+      const noteMatch = highlightText.match(/^(.*?)\s+\((.+)\)$/);
+      if (noteMatch) {
+        highlightText = noteMatch[1].trim();
+        noteText = noteMatch[2].trim();
+      }
+      highlights.push({
+        originalText: highlightText,
+        note: noteText,
+        chapter: currentChapter,
+        highlightColor: -256,
+        // Yellow (default)
+        timestamp: Date.now(),
+        pagePos: 0,
+        rangeStart: "",
+        rangeEnd: ""
+      });
+    }
+  }
+  return {
+    title,
+    author,
+    highlights
+  };
+}
+
 // main.ts
 var import_path2 = require("path");
 var MoonSyncPlugin = class extends import_obsidian7.Plugin {
@@ -1921,6 +1979,11 @@ var MoonSyncPlugin = class extends import_obsidian7.Plugin {
       id: "create-book-note",
       name: "Create Book Note",
       callback: () => this.openCreateBookModal()
+    });
+    this.addCommand({
+      id: "import-note",
+      name: "Import Note",
+      callback: () => this.importManualExport()
     });
     this.addCommand({
       id: "force-refresh-metadata",
@@ -2100,6 +2163,115 @@ var MoonSyncPlugin = class extends import_obsidian7.Plugin {
     } catch (error) {
       notice.hide();
       new import_obsidian7.Notice(`Failed to refresh metadata: ${error}`);
+    }
+  }
+  /**
+   * Import a Moon Reader manual export note
+   */
+  async importManualExport() {
+    const activeFile = this.app.workspace.getActiveFile();
+    if (!activeFile) {
+      new import_obsidian7.Notice("MoonSync: No active file to import");
+      return;
+    }
+    const progressNotice = new import_obsidian7.Notice("MoonSync: Importing note...", 0);
+    try {
+      const content = await this.app.vault.read(activeFile);
+      const exportData = parseManualExport(content);
+      if (!exportData) {
+        progressNotice.hide();
+        new import_obsidian7.Notice("MoonSync: File is not a valid Moon Reader export");
+        return;
+      }
+      const outputPath = (0, import_obsidian7.normalizePath)(this.settings.outputFolder);
+      const filename = generateFilename(exportData.title);
+      const filePath = (0, import_obsidian7.normalizePath)(`${outputPath}/${filename}.md`);
+      if (await this.app.vault.adapter.exists(filePath)) {
+        progressNotice.hide();
+        new import_obsidian7.Notice(`MoonSync: A note for "${exportData.title}" already exists`);
+        return;
+      }
+      if (!await this.app.vault.adapter.exists(outputPath)) {
+        await this.app.vault.createFolder(outputPath);
+      }
+      let coverPath = null;
+      let description = null;
+      let publishedDate = null;
+      let publisher = null;
+      let pageCount = null;
+      let genres = null;
+      let series = null;
+      let language = null;
+      if (this.settings.fetchCovers || this.settings.showDescription) {
+        try {
+          const bookInfo = await fetchBookInfo(exportData.title, exportData.author);
+          if (this.settings.fetchCovers && bookInfo.coverUrl) {
+            const coversFolder = (0, import_obsidian7.normalizePath)(`${outputPath}/covers`);
+            if (!await this.app.vault.adapter.exists(coversFolder)) {
+              await this.app.vault.createFolder(coversFolder);
+            }
+            const coverFilename = `${filename}.jpg`;
+            const coverFilePath = (0, import_obsidian7.normalizePath)(`${coversFolder}/${coverFilename}`);
+            const imageData = await downloadCover(bookInfo.coverUrl);
+            if (imageData) {
+              await this.app.vault.adapter.writeBinary(coverFilePath, imageData);
+              coverPath = `covers/${coverFilename}`;
+            }
+          }
+          description = bookInfo.description;
+          publishedDate = bookInfo.publishedDate;
+          publisher = bookInfo.publisher;
+          pageCount = bookInfo.pageCount;
+          genres = bookInfo.genres;
+          series = bookInfo.series;
+          language = bookInfo.language;
+        } catch (error) {
+          console.log(`MoonSync: Failed to fetch book info for "${exportData.title}"`, error);
+        }
+      }
+      const bookData = {
+        book: {
+          title: exportData.title,
+          author: exportData.author,
+          filename: "",
+          description: "",
+          category: "",
+          iid: ""
+        },
+        highlights: exportData.highlights,
+        statistics: null,
+        progress: null,
+        currentChapter: null,
+        lastReadTimestamp: null,
+        coverPath,
+        fetchedDescription: description,
+        publishedDate,
+        publisher,
+        pageCount,
+        genres,
+        series,
+        isbn10: null,
+        isbn13: null,
+        language
+      };
+      const noteContent = generateBookNote(bookData, this.settings);
+      await this.app.vault.create(filePath, noteContent);
+      progressNotice.hide();
+      new import_obsidian7.Notice(`MoonSync: Imported "${exportData.title}" with ${exportData.highlights.length} highlights`);
+      if (this.settings.showIndex) {
+        await refreshIndexNote(this.app, this.settings);
+      }
+      if (this.settings.generateBaseFile) {
+        await refreshBaseFile(this.app, this.settings);
+      }
+      const file = this.app.vault.getAbstractFileByPath(filePath);
+      if (file) {
+        await this.app.workspace.openLinkText(filePath, "", true);
+      }
+    } catch (error) {
+      progressNotice.hide();
+      console.error("MoonSync: Failed to import note", error);
+      new import_obsidian7.Notice(`MoonSync: Failed to import note - ${error}`);
     }
   }
 };

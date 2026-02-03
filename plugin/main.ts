@@ -1,10 +1,11 @@
-import { Plugin, Notice, setIcon, normalizePath } from "obsidian";
-import { MoonSyncSettings, DEFAULT_SETTINGS } from "./src/types";
+import { Plugin, Notice, setIcon, normalizePath, TFile } from "obsidian";
+import { MoonSyncSettings, DEFAULT_SETTINGS, BookData } from "./src/types";
 import { MoonSyncSettingTab } from "./src/settings";
 import { syncFromMoonReader, showSyncResults, refreshIndexNote, refreshBaseFile } from "./src/sync";
 import { CreateBookModal, generateBookTemplate } from "./src/modal";
-import { generateFilename } from "./src/writer/markdown";
+import { generateFilename, generateBookNote } from "./src/writer/markdown";
 import { fetchBookInfo, downloadCover } from "./src/covers";
+import { parseManualExport } from "./src/parser/manual-export";
 import { join } from "path";
 
 export default class MoonSyncPlugin extends Plugin {
@@ -32,6 +33,13 @@ export default class MoonSyncPlugin extends Plugin {
 			id: "create-book-note",
 			name: "Create Book Note",
 			callback: () => this.openCreateBookModal(),
+		});
+
+		// Add import note command
+		this.addCommand({
+			id: "import-note",
+			name: "Import Note",
+			callback: () => this.importManualExport(),
 		});
 
 		// Add force refresh metadata command
@@ -260,6 +268,146 @@ export default class MoonSyncPlugin extends Plugin {
 		} catch (error) {
 			notice.hide();
 			new Notice(`Failed to refresh metadata: ${error}`);
+		}
+	}
+
+	/**
+	 * Import a Moon Reader manual export note
+	 */
+	async importManualExport(): Promise<void> {
+		const activeFile = this.app.workspace.getActiveFile();
+		if (!activeFile) {
+			new Notice("MoonSync: No active file to import");
+			return;
+		}
+
+		const progressNotice = new Notice("MoonSync: Importing note...", 0);
+
+		try {
+			// Read the file content
+			const content = await this.app.vault.read(activeFile);
+
+			// Parse the manual export format
+			const exportData = parseManualExport(content);
+			if (!exportData) {
+				progressNotice.hide();
+				new Notice("MoonSync: File is not a valid Moon Reader export");
+				return;
+			}
+
+			const outputPath = normalizePath(this.settings.outputFolder);
+			const filename = generateFilename(exportData.title);
+			const filePath = normalizePath(`${outputPath}/${filename}.md`);
+
+			// Check if note already exists
+			if (await this.app.vault.adapter.exists(filePath)) {
+				progressNotice.hide();
+				new Notice(`MoonSync: A note for "${exportData.title}" already exists`);
+				return;
+			}
+
+			// Ensure output folder exists
+			if (!(await this.app.vault.adapter.exists(outputPath))) {
+				await this.app.vault.createFolder(outputPath);
+			}
+
+			// Fetch book info (cover, description, metadata)
+			let coverPath: string | null = null;
+			let description: string | null = null;
+			let publishedDate: string | null = null;
+			let publisher: string | null = null;
+			let pageCount: number | null = null;
+			let genres: string[] | null = null;
+			let series: string | null = null;
+			let language: string | null = null;
+
+			if (this.settings.fetchCovers || this.settings.showDescription) {
+				try {
+					const bookInfo = await fetchBookInfo(exportData.title, exportData.author);
+
+					// Save cover if enabled
+					if (this.settings.fetchCovers && bookInfo.coverUrl) {
+						const coversFolder = normalizePath(`${outputPath}/covers`);
+						if (!(await this.app.vault.adapter.exists(coversFolder))) {
+							await this.app.vault.createFolder(coversFolder);
+						}
+
+						const coverFilename = `${filename}.jpg`;
+						const coverFilePath = normalizePath(`${coversFolder}/${coverFilename}`);
+						const imageData = await downloadCover(bookInfo.coverUrl);
+						if (imageData) {
+							await this.app.vault.adapter.writeBinary(coverFilePath, imageData);
+							coverPath = `covers/${coverFilename}`;
+						}
+					}
+
+					description = bookInfo.description;
+					publishedDate = bookInfo.publishedDate;
+					publisher = bookInfo.publisher;
+					pageCount = bookInfo.pageCount;
+					genres = bookInfo.genres;
+					series = bookInfo.series;
+					language = bookInfo.language;
+				} catch (error) {
+					console.log(`MoonSync: Failed to fetch book info for "${exportData.title}"`, error);
+				}
+			}
+
+			// Create BookData structure
+			const bookData: BookData = {
+				book: {
+					title: exportData.title,
+					author: exportData.author,
+					filename: "",
+					description: "",
+					category: "",
+					iid: "",
+				},
+				highlights: exportData.highlights,
+				statistics: null,
+				progress: null,
+				currentChapter: null,
+				lastReadTimestamp: null,
+				coverPath: coverPath,
+				fetchedDescription: description,
+				publishedDate: publishedDate,
+				publisher: publisher,
+				pageCount: pageCount,
+				genres: genres,
+				series: series,
+				isbn10: null,
+				isbn13: null,
+				language: language,
+			};
+
+			// Generate the note content
+			const noteContent = generateBookNote(bookData, this.settings);
+
+			// Create the file
+			await this.app.vault.create(filePath, noteContent);
+
+			progressNotice.hide();
+			new Notice(`MoonSync: Imported "${exportData.title}" with ${exportData.highlights.length} highlights`);
+
+			// Refresh the index to include the new book
+			if (this.settings.showIndex) {
+				await refreshIndexNote(this.app, this.settings);
+			}
+
+			// Refresh base file
+			if (this.settings.generateBaseFile) {
+				await refreshBaseFile(this.app, this.settings);
+			}
+
+			// Open the newly created file
+			const file = this.app.vault.getAbstractFileByPath(filePath);
+			if (file) {
+				await this.app.workspace.openLinkText(filePath, "", true);
+			}
+		} catch (error) {
+			progressNotice.hide();
+			console.error("MoonSync: Failed to import note", error);
+			new Notice(`MoonSync: Failed to import note - ${error}`);
 		}
 	}
 }
