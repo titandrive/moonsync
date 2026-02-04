@@ -1455,7 +1455,7 @@ function generateIndexNote(books, settings) {
       const coversToShow = settings.coverCollageLimit > 0 ? sortedCovers.slice(0, settings.coverCollageLimit) : sortedCovers;
       const coverImgs = coversToShow.map((book) => {
         const noteFilename = generateFilename(book.book.title);
-        return `<a class="internal-link" href="${noteFilename}"><img src="${book.coverPath}" height="120"></a>`;
+        return `<a class="internal-link" href="${noteFilename}"><img src="${book.coverPath}" style="height: 120px; width: auto;"></a>`;
       }).join(" ");
       lines.push(coverImgs);
       lines.push("");

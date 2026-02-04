@@ -233,7 +233,7 @@ export function generateIndexNote(books: BookData[], settings: MoonSyncSettings)
 			// Display covers with height constraint using HTML img tags, linked to book notes
 			const coverImgs = coversToShow.map(book => {
 				const noteFilename = generateFilename(book.book.title);
-				return `<a class="internal-link" href="${noteFilename}"><img src="${book.coverPath}" height="120"></a>`;
+				return `<a class="internal-link" href="${noteFilename}"><img src="${book.coverPath}" style="height: 120px; width: auto;"></a>`;
 			}).join(" ");
 			lines.push(coverImgs);
 			lines.push("");

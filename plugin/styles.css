@@ -214,7 +214,14 @@
 	border-bottom-color: var(--interactive-accent);
 }
 
-/* Tab content visibility is controlled by moonsync-tab-visible/moonsync-tab-hidden classes */
+/* Tab content visibility */
+.moonsync-tab-content {
+	display: none;
+}
+
+.moonsync-tab-content.active {
+	display: block;
+}
 
 .moonsync-url-description {
 	font-size: 0.9em;
@@ -244,8 +251,6 @@
 	grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
 	gap: 1em;
 	margin: 1em 0;
-	max-height: 60vh;
-	overflow-y: auto;
 	padding: 0.5em;
 }
 
