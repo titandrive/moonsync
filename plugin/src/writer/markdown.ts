@@ -272,7 +272,11 @@ export function generateIndexNote(books: BookData[], settings: MoonSyncSettings)
 
 	for (const bookData of sortedBooks) {
 		// Use actual filename if available (from scanned books), otherwise generate from title
-		const filename = bookData.book.filename || generateFilename(bookData.book.title);
+		// If filename looks like a path (contains /), generate from title instead
+		const rawFilename = bookData.book.filename;
+		const filename = (rawFilename && !rawFilename.includes("/"))
+			? rawFilename
+			: generateFilename(bookData.book.title);
 		const author = bookData.book.author ? ` by ${bookData.book.author}` : "";
 		const progress = bookData.progress !== null ? ` (${bookData.progress.toFixed(0)}%)` : "";
 		const highlightCount = bookData.highlights.length;

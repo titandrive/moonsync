@@ -610,8 +610,12 @@ async function processBook(
 				}
 
 				// Update cache using original title (before Google Books updated it)
+				// Store the longer title (prefer original epub filename over short API title)
+				const cachedTitle = (bookInfo.title && bookInfo.title.length >= originalTitle.length)
+					? bookInfo.title
+					: originalTitle;
 				setCachedInfo(cache, originalTitle, originalAuthor, {
-					title: bookInfo.title, // Canonical title from Google Books/Open Library
+					title: cachedTitle,
 					description: bookInfo.description,
 					author: bookInfo.author,
 					publishedDate: bookInfo.publishedDate,
@@ -895,10 +899,11 @@ export async function refreshIndexNote(app: App, settings: MoonSyncSettings): Pr
 		// Load cache to get canonical titles from Google Books/Open Library
 		const cache = await loadCache(app, outputPath);
 
-		// Update Moon Reader book titles from cache (canonical titles)
+		// Update Moon Reader book titles from cache only if cached title is longer
+		// This preserves full titles from epub filenames when APIs return shorter versions
 		for (const bookData of moonReaderBooks) {
 			const cachedInfo = getCachedInfo(cache, bookData.book.title, bookData.book.author);
-			if (cachedInfo?.title) {
+			if (cachedInfo?.title && cachedInfo.title.length >= bookData.book.title.length) {
 				bookData.book.title = cachedInfo.title;
 			}
 		}

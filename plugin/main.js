@@ -1252,7 +1252,8 @@ function generateIndexNote(books, settings) {
     (a, b) => a.book.title.toLowerCase().localeCompare(b.book.title.toLowerCase())
   );
   for (const bookData of sortedBooks) {
-    const filename = bookData.book.filename || generateFilename(bookData.book.title);
+    const rawFilename = bookData.book.filename;
+    const filename = rawFilename && !rawFilename.includes("/") ? rawFilename : generateFilename(bookData.book.title);
     const author = bookData.book.author ? ` by ${bookData.book.author}` : "";
     const progress = bookData.progress !== null ? ` (${bookData.progress.toFixed(0)}%)` : "";
     const highlightCount = bookData.highlights.length;
@@ -1500,13 +1501,28 @@ function mergeBookLists(moonReaderBooks, scannedBooks) {
   for (const book of result) {
     moonReaderMap.set(book.book.title.toLowerCase(), book);
   }
+  function findMoonReaderBook(scannedTitle) {
+    const scannedLower = scannedTitle.toLowerCase();
+    const exactMatch = moonReaderMap.get(scannedLower);
+    if (exactMatch)
+      return exactMatch;
+    for (const [moonTitle, book] of moonReaderMap) {
+      if (scannedLower.startsWith(moonTitle) || moonTitle.startsWith(scannedLower)) {
+        return book;
+      }
+    }
+    return void 0;
+  }
   for (const scanned of scannedBooks) {
-    const moonReaderBook = moonReaderMap.get(scanned.title.toLowerCase());
+    const moonReaderBook = findMoonReaderBook(scanned.title);
     if (moonReaderBook) {
       const filenameWithExt = scanned.filePath.split("/").pop() || "";
       const actualFilename = filenameWithExt.replace(/\.md$/, "");
       moonReaderBook.book.filename = actualFilename;
       moonReaderBook.book.title = scanned.title;
+      if (scanned.coverPath) {
+        moonReaderBook.coverPath = scanned.coverPath;
+      }
     } else {
       result.push(scannedBookToBookData(scanned));
     }
@@ -1899,9 +1915,9 @@ async function processBook(app, outputPath, bookData, settings, result, cache) {
         if (bookInfo.language) {
           bookData.language = bookInfo.language;
         }
+        const cachedTitle = bookInfo.title && bookInfo.title.length >= originalTitle.length ? bookInfo.title : originalTitle;
         setCachedInfo(cache, originalTitle, originalAuthor, {
-          title: bookInfo.title,
-          // Canonical title from Google Books/Open Library
+          title: cachedTitle,
           description: bookInfo.description,
           author: bookInfo.author,
           publishedDate: bookInfo.publishedDate,
@@ -2070,7 +2086,7 @@ async function refreshIndexNote(app, settings) {
     const cache = await loadCache(app, outputPath);
     for (const bookData of moonReaderBooks) {
       const cachedInfo = getCachedInfo(cache, bookData.book.title, bookData.book.author);
-      if (cachedInfo == null ? void 0 : cachedInfo.title) {
+      if ((cachedInfo == null ? void 0 : cachedInfo.title) && cachedInfo.title.length >= bookData.book.title.length) {
         bookData.book.title = cachedInfo.title;
       }
     }

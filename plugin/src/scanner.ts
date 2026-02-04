@@ -175,19 +175,42 @@ export function mergeBookLists(moonReaderBooks: BookData[], scannedBooks: Scanne
 		moonReaderMap.set(book.book.title.toLowerCase(), book);
 	}
 
+	// Helper to find a Moon Reader book by title, with fuzzy matching
+	// Handles cases where titles differ (e.g., "We Are Legion" vs "We Are Legion (We Are Bob)")
+	function findMoonReaderBook(scannedTitle: string): BookData | undefined {
+		const scannedLower = scannedTitle.toLowerCase();
+
+		// Try exact match first
+		const exactMatch = moonReaderMap.get(scannedLower);
+		if (exactMatch) return exactMatch;
+
+		// Try prefix matching - one title starts with the other
+		for (const [moonTitle, book] of moonReaderMap) {
+			if (scannedLower.startsWith(moonTitle) || moonTitle.startsWith(scannedLower)) {
+				return book;
+			}
+		}
+
+		return undefined;
+	}
+
 	// Update Moon+ Reader books with actual filenames from scanned books
 	// and add scanned books that aren't in Moon+ Reader
 	for (const scanned of scannedBooks) {
-		const moonReaderBook = moonReaderMap.get(scanned.title.toLowerCase());
+		const moonReaderBook = findMoonReaderBook(scanned.title);
 
 		if (moonReaderBook) {
-			// This scanned book matches a Moon+ Reader book - update filename and title
+			// This scanned book matches a Moon+ Reader book - update filename, title, and coverPath
 			// Extract the actual filename from the file path
 			const filenameWithExt = scanned.filePath.split("/").pop() || "";
 			const actualFilename = filenameWithExt.replace(/\.md$/, "");
 			moonReaderBook.book.filename = actualFilename;
 			// Update title from scanned note (has canonical Google Books title)
 			moonReaderBook.book.title = scanned.title;
+			// Preserve cover path from the existing note
+			if (scanned.coverPath) {
+				moonReaderBook.coverPath = scanned.coverPath;
+			}
 		} else {
 			// This is a manual book not from Moon+ Reader - add it
 			result.push(scannedBookToBookData(scanned));
