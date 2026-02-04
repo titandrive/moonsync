@@ -744,7 +744,7 @@ var SelectCoverModal = class extends import_obsidian3.Modal {
         }
       });
     });
-    await this.performSearch();
+    setTimeout(() => this.performSearch(), 150);
   }
   async performSearch() {
     if (!this.resultsContainer)

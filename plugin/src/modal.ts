@@ -286,8 +286,8 @@ export class SelectCoverModal extends Modal {
 					});
 			});
 
-		// Perform initial search
-		await this.performSearch();
+		// Perform initial search after a short delay to ensure modal is fully ready
+		setTimeout(() => this.performSearch(), 150);
 	}
 
 	private async performSearch() {
