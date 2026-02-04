@@ -687,7 +687,7 @@ export default class MoonSyncPlugin extends Plugin {
 		const escapeYaml = (str: string) => str.replace(/"/g, '\\"').replace(/\n/g, " ");
 
 		// Fields we want to replace with new values
-		const fieldsToReplace = new Set(["title", "author", "published_date", "publisher", "page_count", "genres", "series", "language", "cover", "rating", "ratings_count"]);
+		const fieldsToReplace = new Set(["title", "author", "published_date", "publisher", "page_count", "genres", "series", "language", "cover", "rating", "ratings_count", "custom_metadata"]);
 
 		// Parse existing frontmatter
 		const frontmatterLines: string[] = [];
