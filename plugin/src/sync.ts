@@ -583,11 +583,8 @@ async function processBook(
 					bookData.book.author = bookInfo.author;
 				}
 
-				// Use fetched title only if it's more complete (longer or equal)
-				// This preserves full titles from epub filenames when APIs return shorter versions
-				if (bookInfo.title && bookInfo.title.length >= bookData.book.title.length) {
-					bookData.book.title = bookInfo.title;
-				}
+				// Don't use API title for Moon Reader books - epub metadata is more reliable
+				// API titles can be truncated or contain junk
 
 				// Use fetched metadata
 				if (bookInfo.publishedDate) {
@@ -609,13 +606,9 @@ async function processBook(
 					bookData.language = bookInfo.language;
 				}
 
-				// Update cache using original title (before Google Books updated it)
-				// Store the longer title (prefer original epub filename over short API title)
-				const cachedTitle = (bookInfo.title && bookInfo.title.length >= originalTitle.length)
-					? bookInfo.title
-					: originalTitle;
+				// Update cache - store original epub title for Moon Reader books
 				setCachedInfo(cache, originalTitle, originalAuthor, {
-					title: cachedTitle,
+					title: originalTitle,
 					description: bookInfo.description,
 					author: bookInfo.author,
 					publishedDate: bookInfo.publishedDate,
@@ -899,14 +892,7 @@ export async function refreshIndexNote(app: App, settings: MoonSyncSettings): Pr
 		// Load cache to get canonical titles from Google Books/Open Library
 		const cache = await loadCache(app, outputPath);
 
-		// Update Moon Reader book titles from cache only if cached title is longer
-		// This preserves full titles from epub filenames when APIs return shorter versions
-		for (const bookData of moonReaderBooks) {
-			const cachedInfo = getCachedInfo(cache, bookData.book.title, bookData.book.author);
-			if (cachedInfo?.title && cachedInfo.title.length >= bookData.book.title.length) {
-				bookData.book.title = cachedInfo.title;
-			}
-		}
+		// Don't update Moon Reader book titles from cache - epub metadata is more reliable
 
 		const coversFolder = normalizePath(`${outputPath}/covers`);
 
