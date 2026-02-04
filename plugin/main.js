@@ -457,8 +457,8 @@ async function fetchFromGoogleBooks(title, author) {
     language: null
   };
   try {
-    const query = `intitle:${encodeURIComponent(title)} inauthor:${encodeURIComponent(author)}`;
-    const searchUrl = `https://www.googleapis.com/books/v1/volumes?q=${query}&maxResults=1`;
+    const query = author ? `${title} ${author}` : title;
+    const searchUrl = `https://www.googleapis.com/books/v1/volumes?q=${encodeURIComponent(query)}&maxResults=1`;
     const response = await (0, import_obsidian2.requestUrl)({ url: searchUrl });
     const data = response.json;
     if (data.items && data.items.length > 0) {
@@ -502,8 +502,8 @@ async function fetchMultipleBookCovers(title, author, maxResults = 5) {
   var _a, _b, _c, _d, _e, _f, _g;
   const results = [];
   try {
-    const googleQuery = `intitle:${encodeURIComponent(title)} inauthor:${encodeURIComponent(author)}`;
-    const googleUrl = `https://www.googleapis.com/books/v1/volumes?q=${googleQuery}&maxResults=${maxResults}`;
+    const googleQuery = author ? `${title} ${author}` : title;
+    const googleUrl = `https://www.googleapis.com/books/v1/volumes?q=${encodeURIComponent(googleQuery)}&maxResults=${maxResults}`;
     const googleResponse = await (0, import_obsidian2.requestUrl)({ url: googleUrl });
     const googleData = googleResponse.json;
     if (googleData.items && googleData.items.length > 0) {
@@ -581,6 +581,43 @@ async function downloadCover(url) {
     return null;
   }
 }
+async function downloadAndResizeCover(url, maxWidth = 400, maxHeight = 600) {
+  try {
+    const response = await (0, import_obsidian2.requestUrl)({ url });
+    const arrayBuffer = response.arrayBuffer;
+    const blob = new Blob([arrayBuffer]);
+    const imageBitmap = await createImageBitmap(blob);
+    let width = imageBitmap.width;
+    let height = imageBitmap.height;
+    if (width > maxWidth) {
+      height = height * maxWidth / width;
+      width = maxWidth;
+    }
+    if (height > maxHeight) {
+      width = width * maxHeight / height;
+      height = maxHeight;
+    }
+    const canvas = document.createElement("canvas");
+    canvas.width = width;
+    canvas.height = height;
+    const ctx = canvas.getContext("2d");
+    if (!ctx) {
+      console.log("MoonSync: Failed to get canvas context");
+      return arrayBuffer;
+    }
+    ctx.drawImage(imageBitmap, 0, 0, width, height);
+    const resizedBlob = await new Promise((resolve) => {
+      canvas.toBlob((blob2) => resolve(blob2), "image/jpeg", 0.85);
+    });
+    if (!resizedBlob) {
+      return arrayBuffer;
+    }
+    return await resizedBlob.arrayBuffer();
+  } catch (error) {
+    console.log("MoonSync: Failed to download/resize cover", error);
+    return null;
+  }
+}
 
 // src/modal.ts
 var SyncSummaryModal = class extends import_obsidian3.Modal {
@@ -623,15 +660,17 @@ var SyncSummaryModal = class extends import_obsidian3.Modal {
 var SelectCoverModal = class extends import_obsidian3.Modal {
   constructor(app, title, author, onSelect) {
     super(app);
+    this.customUrl = "";
     this.resultsContainer = null;
     this.title = title;
     this.author = author;
     this.onSelect = onSelect;
   }
   async onOpen() {
-    const { contentEl } = this;
+    const { contentEl, modalEl } = this;
     contentEl.empty();
     contentEl.addClass("moonsync-select-cover-modal");
+    modalEl.addClass("mod-moonsync-cover");
     contentEl.createEl("h2", { text: "Select Book Cover" });
     new import_obsidian3.Setting(contentEl).setName("Title").addText((text) => {
       text.setPlaceholder("Book title").setValue(this.title).onChange((value) => {
@@ -645,6 +684,20 @@ var SelectCoverModal = class extends import_obsidian3.Modal {
     });
     new import_obsidian3.Setting(contentEl).addButton((button) => {
       button.setButtonText("Search").setCta().onClick(() => this.performSearch());
+    });
+    contentEl.createEl("h3", { text: "Or use custom URL", cls: "moonsync-custom-url-header" });
+    new import_obsidian3.Setting(contentEl).setName("Image URL").addText((text) => {
+      text.setPlaceholder("https://example.com/cover.jpg").onChange((value) => {
+        this.customUrl = value;
+      });
+    });
+    new import_obsidian3.Setting(contentEl).addButton((button) => {
+      button.setButtonText("Use URL").onClick(() => {
+        if (this.customUrl.trim()) {
+          this.onSelect(this.customUrl.trim());
+          this.close();
+        }
+      });
     });
     this.resultsContainer = contentEl.createDiv({ cls: "moonsync-cover-results" });
     await this.performSearch();
@@ -2493,7 +2546,7 @@ var MoonSyncPlugin = class extends import_obsidian7.Plugin {
             const filename = generateFilename(title);
             const coverFilename = `${filename}.jpg`;
             const coverFilePath = (0, import_obsidian7.normalizePath)(`${coversFolder}/${coverFilename}`);
-            const imageData = await downloadCover(coverUrl);
+            const imageData = await downloadAndResizeCover(coverUrl);
             if (!imageData) {
               progressNotice.hide();
               new import_obsidian7.Notice("MoonSync: Failed to download cover image");
@@ -2501,8 +2554,9 @@ var MoonSyncPlugin = class extends import_obsidian7.Plugin {
             }
             await this.app.vault.adapter.writeBinary(coverFilePath, imageData);
             const coverPath = `covers/${coverFilename}`;
-            const updatedContent = this.updateFrontmatterCover(content, coverPath);
+            const updatedContent = this.updateNoteCover(content, coverPath);
             await this.app.vault.modify(activeFile, updatedContent);
+            await refreshIndexNote(this.app, this.settings);
             progressNotice.hide();
             new import_obsidian7.Notice("MoonSync: Cover updated successfully");
           } catch (error) {
@@ -2518,15 +2572,15 @@ var MoonSyncPlugin = class extends import_obsidian7.Plugin {
     }
   }
   /**
-   * Update the cover field in frontmatter
+   * Update the cover field in frontmatter and add/update cover embed in note body
    */
-  updateFrontmatterCover(content, coverPath) {
+  updateNoteCover(content, coverPath) {
     const frontmatterMatch = content.match(/^---\n([\s\S]*?)\n---/);
     if (!frontmatterMatch) {
       return content;
     }
     const frontmatter = frontmatterMatch[1];
-    const contentAfterFrontmatter = content.slice(frontmatterMatch[0].length);
+    let contentAfterFrontmatter = content.slice(frontmatterMatch[0].length);
     const lines = [];
     lines.push("---");
     let coverUpdated = false;
@@ -2542,6 +2596,29 @@ var MoonSyncPlugin = class extends import_obsidian7.Plugin {
       lines.push(`cover: "${coverPath}"`);
     }
     lines.push("---");
+    const coverEmbed = `![[${coverPath}|200]]`;
+    const coverEmbedPattern = /!\[\[covers\/[^\]]+\|\d+\]\]/;
+    if (coverEmbedPattern.test(contentAfterFrontmatter)) {
+      contentAfterFrontmatter = contentAfterFrontmatter.replace(coverEmbedPattern, coverEmbed);
+    } else {
+      const authorPattern = /(\*\*Author:\*\*[^\n]*\n)/;
+      const titlePattern = /(# [^\n]+\n)/;
+      if (authorPattern.test(contentAfterFrontmatter)) {
+        contentAfterFrontmatter = contentAfterFrontmatter.replace(
+          authorPattern,
+          `$1
+${coverEmbed}
+`
+        );
+      } else if (titlePattern.test(contentAfterFrontmatter)) {
+        contentAfterFrontmatter = contentAfterFrontmatter.replace(
+          titlePattern,
+          `$1
+${coverEmbed}
+`
+        );
+      }
+    }
     return lines.join("\n") + contentAfterFrontmatter;
   }
 };

@@ -150,6 +150,7 @@ export class RefetchCoverModal extends Modal {
 export class SelectCoverModal extends Modal {
 	private title: string;
 	private author: string;
+	private customUrl: string = "";
 	private onSelect: (coverUrl: string) => void;
 	private resultsContainer: HTMLElement | null = null;
 
@@ -166,9 +167,10 @@ export class SelectCoverModal extends Modal {
 	}
 
 	async onOpen() {
-		const { contentEl } = this;
+		const { contentEl, modalEl } = this;
 		contentEl.empty();
 		contentEl.addClass("moonsync-select-cover-modal");
+		modalEl.addClass("mod-moonsync-cover");
 
 		// Title
 		contentEl.createEl("h2", { text: "Select Book Cover" });
@@ -203,6 +205,31 @@ export class SelectCoverModal extends Modal {
 					.setButtonText("Search")
 					.setCta()
 					.onClick(() => this.performSearch());
+			});
+
+		// Custom URL section
+		contentEl.createEl("h3", { text: "Or use custom URL", cls: "moonsync-custom-url-header" });
+
+		new Setting(contentEl)
+			.setName("Image URL")
+			.addText((text) => {
+				text
+					.setPlaceholder("https://example.com/cover.jpg")
+					.onChange((value) => {
+						this.customUrl = value;
+					});
+			});
+
+		new Setting(contentEl)
+			.addButton((button) => {
+				button
+					.setButtonText("Use URL")
+					.onClick(() => {
+						if (this.customUrl.trim()) {
+							this.onSelect(this.customUrl.trim());
+							this.close();
+						}
+					});
 			});
 
 		// Results container

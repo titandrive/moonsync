@@ -241,10 +241,10 @@ async function fetchFromGoogleBooks(
 	};
 
 	try {
-		// Use field-specific search for better results
-		// Don't encode the field operators (intitle:, inauthor:), only the values
-		const query = `intitle:${encodeURIComponent(title)} inauthor:${encodeURIComponent(author)}`;
-		const searchUrl = `https://www.googleapis.com/books/v1/volumes?q=${query}&maxResults=1`;
+		// Use simple keyword search for better matching
+		// Field operators (intitle:, inauthor:) are too strict and miss many books
+		const query = author ? `${title} ${author}` : title;
+		const searchUrl = `https://www.googleapis.com/books/v1/volumes?q=${encodeURIComponent(query)}&maxResults=1`;
 
 		const response = await requestUrl({ url: searchUrl });
 		const data = response.json;
@@ -324,9 +324,9 @@ export async function fetchMultipleBookCovers(
 
 	try {
 		// Fetch from Google Books (supports multiple results)
-		// Don't encode the field operators (intitle:, inauthor:), only the values
-		const googleQuery = `intitle:${encodeURIComponent(title)} inauthor:${encodeURIComponent(author)}`;
-		const googleUrl = `https://www.googleapis.com/books/v1/volumes?q=${googleQuery}&maxResults=${maxResults}`;
+		// Use simple keyword search for better matching
+		const googleQuery = author ? `${title} ${author}` : title;
+		const googleUrl = `https://www.googleapis.com/books/v1/volumes?q=${encodeURIComponent(googleQuery)}&maxResults=${maxResults}`;
 
 		const googleResponse = await requestUrl({ url: googleUrl });
 		const googleData = googleResponse.json;
@@ -423,6 +423,65 @@ export async function downloadCover(url: string): Promise<ArrayBuffer | null> {
 		return response.arrayBuffer;
 	} catch (error) {
 		console.log("MoonSync: Failed to download cover", error);
+		return null;
+	}
+}
+
+/**
+ * Download and resize cover image
+ * Returns resized image as ArrayBuffer (JPEG format)
+ */
+export async function downloadAndResizeCover(
+	url: string,
+	maxWidth: number = 400,
+	maxHeight: number = 600
+): Promise<ArrayBuffer | null> {
+	try {
+		const response = await requestUrl({ url });
+		const arrayBuffer = response.arrayBuffer;
+
+		// Convert to blob and create image
+		const blob = new Blob([arrayBuffer]);
+		const imageBitmap = await createImageBitmap(blob);
+
+		// Calculate new dimensions maintaining aspect ratio
+		let width = imageBitmap.width;
+		let height = imageBitmap.height;
+
+		if (width > maxWidth) {
+			height = (height * maxWidth) / width;
+			width = maxWidth;
+		}
+		if (height > maxHeight) {
+			width = (width * maxHeight) / height;
+			height = maxHeight;
+		}
+
+		// Create canvas and draw resized image
+		const canvas = document.createElement("canvas");
+		canvas.width = width;
+		canvas.height = height;
+
+		const ctx = canvas.getContext("2d");
+		if (!ctx) {
+			console.log("MoonSync: Failed to get canvas context");
+			return arrayBuffer; // Return original if resize fails
+		}
+
+		ctx.drawImage(imageBitmap, 0, 0, width, height);
+
+		// Convert to JPEG blob
+		const resizedBlob = await new Promise<Blob | null>((resolve) => {
+			canvas.toBlob((blob) => resolve(blob), "image/jpeg", 0.85);
+		});
+
+		if (!resizedBlob) {
+			return arrayBuffer; // Return original if conversion fails
+		}
+
+		return await resizedBlob.arrayBuffer();
+	} catch (error) {
+		console.log("MoonSync: Failed to download/resize cover", error);
 		return null;
 	}
 }

@@ -139,9 +139,43 @@
 }
 
 /* Cover selection modal */
+.modal.mod-moonsync-cover {
+	width: 500px !important;
+	max-width: 85vw !important;
+}
+
 .moonsync-select-cover-modal {
-	width: 700px;
-	max-width: 90vw;
+	width: 100%;
+	max-width: 100%;
+	overflow: hidden;
+}
+
+.moonsync-select-cover-modal .setting-item {
+	border-top: none;
+	padding: 0.5em 0;
+	flex-wrap: nowrap;
+}
+
+.moonsync-select-cover-modal .setting-item-info {
+	display: none;
+}
+
+.moonsync-select-cover-modal .setting-item-control {
+	width: 100%;
+}
+
+.moonsync-select-cover-modal .setting-item-control input[type="text"] {
+	width: 100% !important;
+	max-width: 100% !important;
+	box-sizing: border-box;
+}
+
+.moonsync-custom-url-header {
+	font-size: 0.9em;
+	color: var(--text-muted);
+	margin: 1.5em 0 0.5em 0;
+	padding-top: 1em;
+	border-top: 1px solid var(--background-modifier-border);
 }
 
 .moonsync-loading {

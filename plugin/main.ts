@@ -4,7 +4,7 @@ import { MoonSyncSettingTab } from "./src/settings";
 import { syncFromMoonReader, showSyncResults, refreshIndexNote, refreshBaseFile } from "./src/sync";
 import { CreateBookModal, generateBookTemplate, SelectCoverModal } from "./src/modal";
 import { generateFilename, generateBookNote } from "./src/writer/markdown";
-import { fetchBookInfo, downloadCover } from "./src/covers";
+import { fetchBookInfo, downloadCover, downloadAndResizeCover } from "./src/covers";
 import { parseManualExport } from "./src/parser/manual-export";
 import { join } from "path";
 
@@ -475,7 +475,7 @@ export default class MoonSyncPlugin extends Plugin {
 						const coverFilename = `${filename}.jpg`;
 						const coverFilePath = normalizePath(`${coversFolder}/${coverFilename}`);
 
-						const imageData = await downloadCover(coverUrl);
+						const imageData = await downloadAndResizeCover(coverUrl);
 						if (!imageData) {
 							progressNotice.hide();
 							new Notice("MoonSync: Failed to download cover image");
@@ -485,12 +485,15 @@ export default class MoonSyncPlugin extends Plugin {
 						// Save the cover
 						await this.app.vault.adapter.writeBinary(coverFilePath, imageData);
 
-						// Update frontmatter with new cover path
+						// Update frontmatter and note body with new cover path
 						const coverPath = `covers/${coverFilename}`;
-						const updatedContent = this.updateFrontmatterCover(content, coverPath);
+						const updatedContent = this.updateNoteCover(content, coverPath);
 
 						// Write back to file
 						await this.app.vault.modify(activeFile, updatedContent);
+
+						// Refresh index note to include new cover
+						await refreshIndexNote(this.app, this.settings);
 
 						progressNotice.hide();
 						new Notice("MoonSync: Cover updated successfully");
@@ -508,16 +511,16 @@ export default class MoonSyncPlugin extends Plugin {
 	}
 
 	/**
-	 * Update the cover field in frontmatter
+	 * Update the cover field in frontmatter and add/update cover embed in note body
 	 */
-	private updateFrontmatterCover(content: string, coverPath: string): string {
+	private updateNoteCover(content: string, coverPath: string): string {
 		const frontmatterMatch = content.match(/^---\n([\s\S]*?)\n---/);
 		if (!frontmatterMatch) {
 			return content;
 		}
 
 		const frontmatter = frontmatterMatch[1];
-		const contentAfterFrontmatter = content.slice(frontmatterMatch[0].length);
+		let contentAfterFrontmatter = content.slice(frontmatterMatch[0].length);
 
 		const lines: string[] = [];
 		lines.push("---");
@@ -539,6 +542,31 @@ export default class MoonSyncPlugin extends Plugin {
 		}
 
 		lines.push("---");
+
+		// Update or add cover embed in note body
+		const coverEmbed = `![[${coverPath}|200]]`;
+		const coverEmbedPattern = /!\[\[covers\/[^\]]+\|\d+\]\]/;
+
+		if (coverEmbedPattern.test(contentAfterFrontmatter)) {
+			// Replace existing cover embed
+			contentAfterFrontmatter = contentAfterFrontmatter.replace(coverEmbedPattern, coverEmbed);
+		} else {
+			// Add cover embed after author line or after title
+			const authorPattern = /(\*\*Author:\*\*[^\n]*\n)/;
+			const titlePattern = /(# [^\n]+\n)/;
+
+			if (authorPattern.test(contentAfterFrontmatter)) {
+				contentAfterFrontmatter = contentAfterFrontmatter.replace(
+					authorPattern,
+					`$1\n${coverEmbed}\n`
+				);
+			} else if (titlePattern.test(contentAfterFrontmatter)) {
+				contentAfterFrontmatter = contentAfterFrontmatter.replace(
+					titlePattern,
+					`$1\n${coverEmbed}\n`
+				);
+			}
+		}
 
 		return lines.join("\n") + contentAfterFrontmatter;
 	}
