@@ -2,9 +2,9 @@ import { Plugin, Notice, setIcon, normalizePath, TFile } from "obsidian";
 import { MoonSyncSettings, DEFAULT_SETTINGS, BookData } from "./src/types";
 import { MoonSyncSettingTab } from "./src/settings";
 import { syncFromMoonReader, showSyncResults, refreshIndexNote, refreshBaseFile } from "./src/sync";
-import { CreateBookModal, generateBookTemplate, SelectCoverModal } from "./src/modal";
+import { CreateBookModal, generateBookTemplate, SelectCoverModal, SelectBookMetadataModal } from "./src/modal";
 import { generateFilename, generateBookNote } from "./src/writer/markdown";
-import { fetchBookInfo, downloadCover, downloadAndResizeCover } from "./src/covers";
+import { fetchBookInfo, downloadCover, downloadAndResizeCover, BookInfoResult } from "./src/covers";
 import { parseManualExport } from "./src/parser/manual-export";
 import { join } from "path";
 
@@ -47,6 +47,13 @@ export default class MoonSyncPlugin extends Plugin {
 			id: "refetch-cover",
 			name: "Fetch Book Cover",
 			callback: () => this.refetchBookCover(),
+		});
+
+		// Add fetch metadata command
+		this.addCommand({
+			id: "fetch-metadata",
+			name: "Fetch Book Metadata",
+			callback: () => this.fetchBookMetadata(),
 		});
 
 		// Sync on startup if enabled
@@ -550,6 +557,256 @@ export default class MoonSyncPlugin extends Plugin {
 					titlePattern,
 					`$1\n${coverEmbed}\n`
 				);
+			}
+		}
+
+		return lines.join("\n") + contentAfterFrontmatter;
+	}
+
+	/**
+	 * Fetch and replace all book metadata for the current note
+	 */
+	async fetchBookMetadata(): Promise<void> {
+		const activeFile = this.app.workspace.getActiveFile();
+		if (!activeFile) {
+			new Notice("MoonSync: No active file");
+			return;
+		}
+
+		try {
+			// Read the file content to get title and author from frontmatter
+			const content = await this.app.vault.read(activeFile);
+
+			// Extract frontmatter
+			const frontmatterMatch = content.match(/^---\n([\s\S]*?)\n---/);
+			if (!frontmatterMatch) {
+				new Notice("MoonSync: This file doesn't have frontmatter");
+				return;
+			}
+
+			const frontmatter = frontmatterMatch[1];
+
+			// Extract title and author
+			const titleMatch = frontmatter.match(/^title:\s*"?([^"\n]+)"?/m);
+			const authorMatch = frontmatter.match(/^author:\s*"?([^"\n]+)"?/m);
+
+			if (!titleMatch) {
+				new Notice("MoonSync: No title found in frontmatter");
+				return;
+			}
+
+			const title = titleMatch[1].trim().replace(/\\"/g, '"');
+			const author = authorMatch ? authorMatch[1].trim().replace(/\\"/g, '"') : "";
+
+			// Open metadata selection modal
+			new SelectBookMetadataModal(
+				this.app,
+				title,
+				author,
+				async (bookInfo: BookInfoResult) => {
+					const progressNotice = new Notice("MoonSync: Updating metadata...", 0);
+
+					try {
+						// Get the directory of the current file
+						const fileDir = activeFile.parent?.path || "";
+						const coversFolder = normalizePath(`${fileDir}/covers`);
+						let coverPath: string | null = null;
+
+						// Determine new filename based on new title (or keep original if no new title)
+						const newTitle = bookInfo.title || title;
+						const newFilename = generateFilename(newTitle);
+						const newFilePath = normalizePath(`${fileDir}/${newFilename}.md`);
+
+						// Handle cover: download new cover if available
+						if (bookInfo.coverUrl) {
+							if (!(await this.app.vault.adapter.exists(coversFolder))) {
+								await this.app.vault.createFolder(coversFolder);
+							}
+
+							const coverFilename = `${newFilename}.jpg`;
+							const coverFilePath = normalizePath(`${coversFolder}/${coverFilename}`);
+
+							const imageData = await downloadAndResizeCover(bookInfo.coverUrl);
+							if (imageData) {
+								// Delete existing cover first to force cache invalidation
+								const existingCover = this.app.vault.getAbstractFileByPath(coverFilePath);
+								if (existingCover instanceof TFile) {
+									await this.app.vault.delete(existingCover);
+								}
+								await this.app.vault.createBinary(coverFilePath, imageData);
+								coverPath = `covers/${coverFilename}`;
+							}
+						}
+
+						// Update the note with all new metadata
+						const updatedContent = this.updateNoteMetadata(content, bookInfo, coverPath);
+
+						// Temporarily remove cover embed to force cache invalidation
+						const contentWithoutEmbed = updatedContent.replace(/!\[\[covers\/[^\]]+\]\]\n?/, "");
+						await this.app.vault.modify(activeFile, contentWithoutEmbed);
+
+						// Small delay then re-add the embed
+						await new Promise(resolve => setTimeout(resolve, 50));
+						await this.app.vault.modify(activeFile, updatedContent);
+
+						// Rename file if filename doesn't match the expected name for this title
+						if (activeFile.basename !== newFilename) {
+							await this.app.fileManager.renameFile(activeFile, newFilePath);
+						}
+
+						// Refresh index note
+						await refreshIndexNote(this.app, this.settings);
+
+						progressNotice.hide();
+						new Notice("MoonSync: Metadata updated successfully");
+					} catch (error) {
+						progressNotice.hide();
+						console.error("MoonSync: Failed to update metadata", error);
+						new Notice(`MoonSync: Failed to update metadata - ${error}`);
+					}
+				}
+			).open();
+		} catch (error) {
+			console.error("MoonSync: Failed to fetch metadata", error);
+			new Notice(`MoonSync: Failed to fetch metadata - ${error}`);
+		}
+	}
+
+	/**
+	 * Update all metadata fields in frontmatter and note body
+	 */
+	private updateNoteMetadata(content: string, bookInfo: BookInfoResult, coverPath: string | null): string {
+		const frontmatterMatch = content.match(/^---\n([\s\S]*?)\n---/);
+		if (!frontmatterMatch) {
+			return content;
+		}
+
+		const frontmatter = frontmatterMatch[1];
+		let contentAfterFrontmatter = content.slice(frontmatterMatch[0].length);
+
+		const escapeYaml = (str: string) => str.replace(/"/g, '\\"').replace(/\n/g, " ");
+
+		// Fields we want to replace with new values
+		const fieldsToReplace = new Set(["title", "author", "published_date", "publisher", "page_count", "genres", "series", "language", "cover", "rating", "ratings_count"]);
+
+		// Parse existing frontmatter
+		const frontmatterLines: string[] = [];
+		let skipNextLines = false;
+
+		for (const line of frontmatter.split("\n")) {
+			// Skip array items from previous field
+			if (line.startsWith("  -")) {
+				if (skipNextLines) continue;
+				frontmatterLines.push(line);
+				continue;
+			}
+			skipNextLines = false;
+
+			const fieldMatch = line.match(/^(\w+):/);
+			if (fieldMatch) {
+				const field = fieldMatch[1];
+
+				// Replace these fields with new values
+				if (fieldsToReplace.has(field)) {
+					if (field === "genres") {
+						skipNextLines = true;
+					}
+					continue; // Skip this line, we'll add updated values later
+				}
+			}
+
+			frontmatterLines.push(line);
+		}
+
+		// Build new frontmatter
+		const lines: string[] = [];
+		lines.push("---");
+
+		// Add existing fields (non-replaced ones)
+		for (const line of frontmatterLines) {
+			if (line.trim()) {
+				lines.push(line);
+			}
+		}
+
+		// Add new/updated metadata
+		if (bookInfo.title) {
+			lines.push(`title: "${escapeYaml(bookInfo.title)}"`);
+		}
+		if (bookInfo.author) {
+			lines.push(`author: "${escapeYaml(bookInfo.author)}"`);
+		}
+		if (bookInfo.publishedDate) {
+			lines.push(`published_date: "${escapeYaml(bookInfo.publishedDate)}"`);
+		}
+		if (bookInfo.publisher) {
+			lines.push(`publisher: "${escapeYaml(bookInfo.publisher)}"`);
+		}
+		if (bookInfo.pageCount !== null) {
+			lines.push(`page_count: ${bookInfo.pageCount}`);
+		}
+		if (bookInfo.genres && bookInfo.genres.length > 0) {
+			lines.push(`genres:`);
+			for (const genre of bookInfo.genres) {
+				lines.push(`  - "${escapeYaml(genre)}"`);
+			}
+		}
+		if (bookInfo.series) {
+			lines.push(`series: "${escapeYaml(bookInfo.series)}"`);
+		}
+		if (bookInfo.language) {
+			lines.push(`language: "${bookInfo.language}"`);
+		}
+		if (coverPath) {
+			lines.push(`cover: "${coverPath}"`);
+		}
+		// Add custom_metadata flag so sync doesn't overwrite
+		lines.push(`custom_metadata: true`);
+
+		lines.push("---");
+
+		// Update content: title, author, cover embed
+		if (bookInfo.title) {
+			// Update the title heading
+			contentAfterFrontmatter = contentAfterFrontmatter.replace(
+				/^(# ).+$/m,
+				`$1${bookInfo.title}`
+			);
+		}
+
+		if (bookInfo.author) {
+			// Update or add author line
+			if (/\*\*Author:\*\*/.test(contentAfterFrontmatter)) {
+				contentAfterFrontmatter = contentAfterFrontmatter.replace(
+					/\*\*Author:\*\*[^\n]*/,
+					`**Author:** ${bookInfo.author}`
+				);
+			}
+		}
+
+		// Update cover embed
+		if (coverPath) {
+			const coverEmbed = `![[${coverPath}|200]]`;
+			const coverEmbedPattern = /!\[\[covers\/[^\]]+\|\d+\]\]/;
+
+			if (coverEmbedPattern.test(contentAfterFrontmatter)) {
+				contentAfterFrontmatter = contentAfterFrontmatter.replace(coverEmbedPattern, coverEmbed);
+			} else {
+				// Add cover embed after author line or after title
+				const authorPattern = /(\*\*Author:\*\*[^\n]*\n)/;
+				const titlePattern = /(# [^\n]+\n)/;
+
+				if (authorPattern.test(contentAfterFrontmatter)) {
+					contentAfterFrontmatter = contentAfterFrontmatter.replace(
+						authorPattern,
+						`$1\n${coverEmbed}\n`
+					);
+				} else if (titlePattern.test(contentAfterFrontmatter)) {
+					contentAfterFrontmatter = contentAfterFrontmatter.replace(
+						titlePattern,
+						`$1\n${coverEmbed}\n`
+					);
+				}
 			}
 		}
 

@@ -179,6 +179,7 @@ interface ExistingBookData {
 	highlightsCount: number;
 	progress: number | null;
 	isManualNote: boolean;
+	hasCustomMetadata: boolean;
 	fullContent?: string;
 }
 
@@ -196,12 +197,14 @@ async function getExistingBookData(app: App, filePath: string): Promise<Existing
 		const countMatch = content.match(/^highlights_count:\s*(\d+)/m);
 		const progressMatch = content.match(/^progress:\s*"?(\d+(?:\.\d+)?)/m);
 		const manualNoteMatch = content.match(/^manual_note:\s*true/m);
+		const customMetadataMatch = content.match(/^custom_metadata:\s*true/m);
 
 		if (countMatch) {
 			return {
 				highlightsCount: parseInt(countMatch[1], 10),
 				progress: progressMatch ? parseFloat(progressMatch[1]) : null,
 				isManualNote: !!manualNoteMatch,
+				hasCustomMetadata: !!customMetadataMatch,
 				fullContent: content,
 			};
 		}
@@ -322,6 +325,129 @@ function mergeManualNoteWithMoonReader(
 	for (const highlight of bookData.highlights) {
 		lines.push(formatHighlight(highlight, settings.showHighlightColors, settings.showNotes));
 		lines.push("");
+	}
+
+	return lines.join("\n");
+}
+
+/**
+ * Merge existing note with custom metadata with new highlights from Moon+ Reader
+ * Preserves all metadata (title, author, cover, description, etc.) and replaces only highlights
+ */
+function mergeCustomMetadataWithHighlights(
+	existingContent: string,
+	bookData: BookData,
+	settings: MoonSyncSettings
+): string {
+	const lines: string[] = [];
+
+	// Parse existing frontmatter and content
+	const frontmatterMatch = existingContent.match(/^---\n([\s\S]*?)\n---/);
+	if (!frontmatterMatch) {
+		// No frontmatter, fall back to generating new note
+		return generateBookNote(bookData, settings);
+	}
+
+	const frontmatter = frontmatterMatch[1];
+	let contentAfterFrontmatter = existingContent.slice(frontmatterMatch[0].length);
+
+	// Start building new frontmatter - preserve all existing fields except sync stats
+	lines.push("---");
+
+	const frontmatterLines = frontmatter.split("\n");
+	let skipNextLines = false;
+
+	for (const line of frontmatterLines) {
+		// Skip array items from previous field we're skipping
+		if (line.trim().startsWith("-") && skipNextLines) {
+			continue;
+		}
+		skipNextLines = false;
+
+		// Skip fields that sync will update (stats only, not metadata)
+		if (line.startsWith("progress:") ||
+		    line.startsWith("current_chapter:") ||
+		    line.startsWith("highlights_count:") ||
+		    line.startsWith("notes_count:") ||
+		    line.startsWith("last_synced:")) {
+			continue;
+		}
+
+		lines.push(line);
+	}
+
+	// Add/update sync stats
+	lines.push(`last_synced: ${new Date().toISOString().split("T")[0]}`);
+	lines.push(`highlights_count: ${bookData.highlights.length}`);
+	const notesCount = bookData.highlights.filter((h) => h.note && h.note.trim()).length;
+	lines.push(`notes_count: ${notesCount}`);
+
+	if (settings.showProgress && bookData.progress !== null) {
+		lines.push(`progress: "${bookData.progress.toFixed(1)}%"`);
+		if (bookData.currentChapter) {
+			lines.push(`current_chapter: ${bookData.currentChapter}`);
+		}
+	}
+
+	lines.push("---");
+
+	// Replace just the Highlights section, preserve everything else
+	const highlightsHeaderPattern = /\n## Highlights\n/;
+	const nextSectionPattern = /\n## [^H]/; // Next section that's not Highlights
+
+	const highlightsMatch = contentAfterFrontmatter.match(highlightsHeaderPattern);
+
+	if (highlightsMatch && highlightsMatch.index !== undefined) {
+		// Keep content before Highlights
+		const beforeHighlights = contentAfterFrontmatter.slice(0, highlightsMatch.index);
+		lines.push(beforeHighlights);
+
+		// Check if there's content after Highlights section
+		const afterHighlightsStart = highlightsMatch.index + highlightsMatch[0].length;
+		const remainingContent = contentAfterFrontmatter.slice(afterHighlightsStart);
+		const nextSectionMatch = remainingContent.match(nextSectionPattern);
+
+		let afterHighlights = "";
+		if (nextSectionMatch && nextSectionMatch.index !== undefined) {
+			afterHighlights = remainingContent.slice(nextSectionMatch.index);
+		}
+
+		// Generate new Highlights section
+		lines.push("");
+		lines.push("## Highlights");
+		lines.push("");
+
+		if (settings.showReadingProgress && (bookData.progress !== null || bookData.currentChapter !== null)) {
+			lines.push("**Reading Progress:**");
+			if (bookData.progress !== null) {
+				lines.push(`- Progress: ${bookData.progress.toFixed(1)}%`);
+			}
+			if (bookData.currentChapter !== null) {
+				lines.push(`- Chapter: ${bookData.currentChapter}`);
+			}
+			lines.push("");
+		}
+
+		for (const highlight of bookData.highlights) {
+			lines.push(formatHighlight(highlight, settings.showHighlightColors, settings.showNotes));
+			lines.push("");
+		}
+
+		// Add content after Highlights if any
+		if (afterHighlights) {
+			lines.push(afterHighlights);
+		}
+	} else {
+		// No Highlights section found, append to end
+		lines.push(contentAfterFrontmatter);
+		lines.push("");
+		lines.push("## Highlights");
+		lines.push("");
+
+		for (const highlight of bookData.highlights) {
+			lines.push(formatHighlight(highlight, settings.showHighlightColors, settings.showNotes));
+			lines.push("");
+		}
 	}
 
 	return lines.join("\n");
@@ -636,6 +762,9 @@ async function processBook(
 	if (fileExists && existingData.isManualNote) {
 		// Merge manual note with Moon+ Reader data
 		markdown = mergeManualNoteWithMoonReader(existingData.fullContent!, bookData, settings);
+	} else if (fileExists && existingData.hasCustomMetadata) {
+		// Preserve custom metadata, only update highlights
+		markdown = mergeCustomMetadataWithHighlights(existingData.fullContent!, bookData, settings);
 	} else {
 		// Generate new Moon+ Reader note
 		markdown = generateBookNote(bookData, settings);
@@ -666,6 +795,17 @@ async function processCustomBook(
 	cache: BookInfoCache
 ): Promise<boolean> {
 	let cacheModified = false;
+
+	// Check if note has custom_metadata flag - if so, skip metadata updates
+	try {
+		const content = await app.vault.adapter.read(scannedBook.filePath);
+		if (/^custom_metadata:\s*true/m.test(content)) {
+			// User has set custom metadata, don't overwrite
+			return false;
+		}
+	} catch {
+		// File read failed, continue with normal processing
+	}
 
 	// Check if we need to fetch metadata
 	const cachedInfo = getCachedInfo(cache, scannedBook.title, scannedBook.author || "");
