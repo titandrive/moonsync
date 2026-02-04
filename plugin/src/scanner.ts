@@ -181,11 +181,13 @@ export function mergeBookLists(moonReaderBooks: BookData[], scannedBooks: Scanne
 		const moonReaderBook = moonReaderMap.get(scanned.title.toLowerCase());
 
 		if (moonReaderBook) {
-			// This scanned book matches a Moon+ Reader book - update the filename
+			// This scanned book matches a Moon+ Reader book - update filename and title
 			// Extract the actual filename from the file path
 			const filenameWithExt = scanned.filePath.split("/").pop() || "";
 			const actualFilename = filenameWithExt.replace(/\.md$/, "");
 			moonReaderBook.book.filename = actualFilename;
+			// Update title from scanned note (has canonical Google Books title)
+			moonReaderBook.book.title = scanned.title;
 		} else {
 			// This is a manual book not from Moon+ Reader - add it
 			result.push(scannedBookToBookData(scanned));

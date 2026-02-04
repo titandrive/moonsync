@@ -398,7 +398,7 @@ async function fetchFromOpenLibrary(title, author) {
     if (data.docs && data.docs.length > 0) {
       const book = data.docs[0];
       if (book.title) {
-        result.title = book.title;
+        result.title = book.subtitle ? `${book.title} ${book.subtitle}` : book.title;
       }
       if (book.cover_i) {
         result.coverUrl = `https://covers.openlibrary.org/b/id/${book.cover_i}-L.jpg`;
@@ -465,7 +465,7 @@ async function fetchFromGoogleBooks(title, author) {
       const book = data.items[0];
       const volumeInfo = book.volumeInfo;
       if (volumeInfo == null ? void 0 : volumeInfo.title) {
-        result.title = volumeInfo.title;
+        result.title = volumeInfo.subtitle ? `${volumeInfo.title} ${volumeInfo.subtitle}` : volumeInfo.title;
       }
       const imageLinks = volumeInfo == null ? void 0 : volumeInfo.imageLinks;
       if (imageLinks) {
@@ -513,8 +513,9 @@ async function fetchMultipleBookCovers(title, author, maxResults = 5) {
         if (imageLinks) {
           const coverUrl = (_a = imageLinks.large || imageLinks.medium || imageLinks.thumbnail || imageLinks.smallThumbnail) == null ? void 0 : _a.replace("http://", "https://");
           if (coverUrl) {
+            const fullTitle = (volumeInfo == null ? void 0 : volumeInfo.subtitle) ? `${volumeInfo.title} ${volumeInfo.subtitle}` : volumeInfo == null ? void 0 : volumeInfo.title;
             results.push({
-              title: (volumeInfo == null ? void 0 : volumeInfo.title) || null,
+              title: fullTitle || null,
               author: ((_b = volumeInfo == null ? void 0 : volumeInfo.authors) == null ? void 0 : _b[0]) || null,
               coverUrl,
               description: (volumeInfo == null ? void 0 : volumeInfo.description) || null,
@@ -547,8 +548,9 @@ async function fetchMultipleBookCovers(title, author, maxResults = 5) {
           coverUrl = `https://covers.openlibrary.org/b/isbn/${book.isbn[0]}-L.jpg`;
         }
         if (coverUrl) {
+          const fullTitle = book.subtitle ? `${book.title} ${book.subtitle}` : book.title;
           results.push({
-            title: book.title || null,
+            title: fullTitle || null,
             author: ((_c = book.author_name) == null ? void 0 : _c[0]) || null,
             coverUrl,
             description: null,
@@ -1504,6 +1506,7 @@ function mergeBookLists(moonReaderBooks, scannedBooks) {
       const filenameWithExt = scanned.filePath.split("/").pop() || "";
       const actualFilename = filenameWithExt.replace(/\.md$/, "");
       moonReaderBook.book.filename = actualFilename;
+      moonReaderBook.book.title = scanned.title;
     } else {
       result.push(scannedBookToBookData(scanned));
     }
@@ -1875,7 +1878,7 @@ async function processBook(app, outputPath, bookData, settings, result, cache) {
         if (!bookData.book.author && bookInfo.author) {
           bookData.book.author = bookInfo.author;
         }
-        if (bookInfo.title) {
+        if (bookInfo.title && bookInfo.title.length >= bookData.book.title.length) {
           bookData.book.title = bookInfo.title;
         }
         if (bookInfo.publishedDate) {
@@ -1897,6 +1900,8 @@ async function processBook(app, outputPath, bookData, settings, result, cache) {
           bookData.language = bookInfo.language;
         }
         setCachedInfo(cache, originalTitle, originalAuthor, {
+          title: bookInfo.title,
+          // Canonical title from Google Books/Open Library
           description: bookInfo.description,
           author: bookInfo.author,
           publishedDate: bookInfo.publishedDate,
@@ -1943,6 +1948,8 @@ async function processCustomBook(app, outputPath, scannedBook, settings, result,
     const updatedContent = updateCustomBookFrontmatter(content, bookInfo, settings);
     await app.vault.adapter.write(scannedBook.filePath, updatedContent);
     setCachedInfo(cache, scannedBook.title, scannedBook.author, {
+      title: bookInfo.title,
+      // Canonical title from Google Books/Open Library
       description: bookInfo.description,
       author: bookInfo.author,
       publishedDate: bookInfo.publishedDate,
@@ -2058,6 +2065,13 @@ async function refreshIndexNote(app, settings) {
       try {
         moonReaderBooks = await parseAnnotationFiles(settings.dropboxPath);
       } catch (e) {
+      }
+    }
+    const cache = await loadCache(app, outputPath);
+    for (const bookData of moonReaderBooks) {
+      const cachedInfo = getCachedInfo(cache, bookData.book.title, bookData.book.author);
+      if (cachedInfo == null ? void 0 : cachedInfo.title) {
+        bookData.book.title = cachedInfo.title;
       }
     }
     const coversFolder = (0, import_obsidian6.normalizePath)(`${outputPath}/covers`);

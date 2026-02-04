@@ -150,9 +150,11 @@ async function fetchFromOpenLibrary(
 		if (data.docs && data.docs.length > 0) {
 			const book = data.docs[0];
 
-			// Get title
+			// Get title (combine with subtitle if present)
 			if (book.title) {
-				result.title = book.title;
+				result.title = book.subtitle
+					? `${book.title} ${book.subtitle}`
+					: book.title;
 			}
 
 			// Get cover URL
@@ -253,9 +255,11 @@ async function fetchFromGoogleBooks(
 			const book = data.items[0];
 			const volumeInfo = book.volumeInfo;
 
-			// Get title
+			// Get title (combine with subtitle if present)
 			if (volumeInfo?.title) {
-				result.title = volumeInfo.title;
+				result.title = volumeInfo.subtitle
+					? `${volumeInfo.title} ${volumeInfo.subtitle}`
+					: volumeInfo.title;
 			}
 
 			// Get cover URL
@@ -346,8 +350,12 @@ export async function fetchMultipleBookCovers(
 					)?.replace("http://", "https://");
 
 					if (coverUrl) {
+						// Combine title + subtitle
+						const fullTitle = volumeInfo?.subtitle
+							? `${volumeInfo.title} ${volumeInfo.subtitle}`
+							: volumeInfo?.title;
 						results.push({
-							title: volumeInfo?.title || null,
+							title: fullTitle || null,
 							author: volumeInfo?.authors?.[0] || null,
 							coverUrl,
 							description: volumeInfo?.description || null,
@@ -386,8 +394,12 @@ export async function fetchMultipleBookCovers(
 				}
 
 				if (coverUrl) {
+					// Combine title + subtitle if present
+					const fullTitle = book.subtitle
+						? `${book.title} ${book.subtitle}`
+						: book.title;
 					results.push({
-						title: book.title || null,
+						title: fullTitle || null,
 						author: book.author_name?.[0] || null,
 						coverUrl,
 						description: null, // Would need extra API call per book

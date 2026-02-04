@@ -1,6 +1,7 @@
 import { App, normalizePath } from "obsidian";
 
 export interface CachedBookInfo {
+	title: string | null; // Canonical title from Google Books/Open Library
 	description: string | null;
 	author: string | null;
 	publishedDate: string | null;

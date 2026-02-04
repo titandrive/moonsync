@@ -583,8 +583,9 @@ async function processBook(
 					bookData.book.author = bookInfo.author;
 				}
 
-				// Use fetched title if available (Google Books provides canonical titles)
-				if (bookInfo.title) {
+				// Use fetched title only if it's more complete (longer or equal)
+				// This preserves full titles from epub filenames when APIs return shorter versions
+				if (bookInfo.title && bookInfo.title.length >= bookData.book.title.length) {
 					bookData.book.title = bookInfo.title;
 				}
 
@@ -610,6 +611,7 @@ async function processBook(
 
 				// Update cache using original title (before Google Books updated it)
 				setCachedInfo(cache, originalTitle, originalAuthor, {
+					title: bookInfo.title, // Canonical title from Google Books/Open Library
 					description: bookInfo.description,
 					author: bookInfo.author,
 					publishedDate: bookInfo.publishedDate,
@@ -704,6 +706,7 @@ async function processCustomBook(
 
 			// Update cache
 			setCachedInfo(cache, scannedBook.title, scannedBook.author, {
+				title: bookInfo.title, // Canonical title from Google Books/Open Library
 				description: bookInfo.description,
 				author: bookInfo.author,
 				publishedDate: bookInfo.publishedDate,
@@ -886,6 +889,17 @@ export async function refreshIndexNote(app: App, settings: MoonSyncSettings): Pr
 				moonReaderBooks = await parseAnnotationFiles(settings.dropboxPath);
 			} catch {
 				// Dropbox path might not be accessible, that's ok for manual-only use
+			}
+		}
+
+		// Load cache to get canonical titles from Google Books/Open Library
+		const cache = await loadCache(app, outputPath);
+
+		// Update Moon Reader book titles from cache (canonical titles)
+		for (const bookData of moonReaderBooks) {
+			const cachedInfo = getCachedInfo(cache, bookData.book.title, bookData.book.author);
+			if (cachedInfo?.title) {
+				bookData.book.title = cachedInfo.title;
 			}
 		}
 
