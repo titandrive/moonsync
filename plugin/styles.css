@@ -214,13 +214,7 @@
 	border-bottom-color: var(--interactive-accent);
 }
 
-.moonsync-tab-content {
-	display: none;
-}
-
-.moonsync-tab-content.active {
-	display: block;
-}
+/* Tab content visibility is controlled by moonsync-tab-visible/moonsync-tab-hidden classes */
 
 .moonsync-url-description {
 	font-size: 0.9em;
