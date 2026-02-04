@@ -456,14 +456,25 @@ export default class MoonSyncPlugin extends Plugin {
 							return;
 						}
 
-						// Save the cover
-						await this.app.vault.adapter.writeBinary(coverFilePath, imageData);
+						// Delete existing cover first to force cache invalidation
+						const existingFile = this.app.vault.getAbstractFileByPath(coverFilePath);
+						if (existingFile instanceof TFile) {
+							await this.app.vault.delete(existingFile);
+						}
+
+						// Save the new cover using vault method (triggers Obsidian events)
+						await this.app.vault.createBinary(coverFilePath, imageData);
 
 						// Update frontmatter and note body with new cover path
 						const coverPath = `covers/${coverFilename}`;
 						const updatedContent = this.updateNoteCover(content, coverPath);
 
-						// Write back to file
+						// Temporarily remove cover embed to force cache invalidation
+						const contentWithoutEmbed = updatedContent.replace(/!\[\[covers\/[^\]]+\]\]\n?/, "");
+						await this.app.vault.modify(activeFile, contentWithoutEmbed);
+
+						// Small delay then re-add the embed
+						await new Promise(resolve => setTimeout(resolve, 50));
 						await this.app.vault.modify(activeFile, updatedContent);
 
 						// Refresh index note to include new cover

@@ -2574,9 +2574,16 @@ var MoonSyncPlugin = class extends import_obsidian7.Plugin {
               new import_obsidian7.Notice("MoonSync: Failed to download cover image");
               return;
             }
-            await this.app.vault.adapter.writeBinary(coverFilePath, imageData);
+            const existingFile = this.app.vault.getAbstractFileByPath(coverFilePath);
+            if (existingFile instanceof import_obsidian7.TFile) {
+              await this.app.vault.delete(existingFile);
+            }
+            await this.app.vault.createBinary(coverFilePath, imageData);
             const coverPath = `covers/${coverFilename}`;
             const updatedContent = this.updateNoteCover(content, coverPath);
+            const contentWithoutEmbed = updatedContent.replace(/!\[\[covers\/[^\]]+\]\]\n?/, "");
+            await this.app.vault.modify(activeFile, contentWithoutEmbed);
+            await new Promise((resolve) => setTimeout(resolve, 50));
             await this.app.vault.modify(activeFile, updatedContent);
             await refreshIndexNote(this.app, this.settings);
             progressNotice.hide();
