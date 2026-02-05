@@ -305,8 +305,8 @@ function mergeManualNoteWithMoonReader(
 	lines.push(contentAfterFrontmatter);
 	lines.push("");
 
-	// Add Moon+ Reader highlights section
-	lines.push("## Moon+ Reader Highlights");
+	// Add Moon Reader highlights section
+	lines.push("## Moon Reader Highlights");
 	lines.push("");
 
 	// Add progress info if enabled
@@ -392,8 +392,9 @@ function mergeCustomMetadataWithHighlights(
 	lines.push("---");
 
 	// Replace just the Highlights section, preserve everything else
-	const highlightsHeaderPattern = /\n## Highlights\n/;
-	const nextSectionPattern = /\n## [^H]/; // Next section that's not Highlights
+	// Match both old "## Highlights" and new "## Moon Reader Highlights" headers
+	const highlightsHeaderPattern = /\n## (Moon Reader )?Highlights\n/;
+	const nextSectionPattern = /\n## (?!Moon Reader Highlights|Highlights)[^\n]/; // Next section that's not Highlights
 
 	const highlightsMatch = contentAfterFrontmatter.match(highlightsHeaderPattern);
 
@@ -414,7 +415,7 @@ function mergeCustomMetadataWithHighlights(
 
 		// Generate new Highlights section
 		lines.push("");
-		lines.push("## Highlights");
+		lines.push("## Moon Reader Highlights");
 		lines.push("");
 
 		if (settings.showReadingProgress && (bookData.progress !== null || bookData.currentChapter !== null)) {
@@ -441,7 +442,7 @@ function mergeCustomMetadataWithHighlights(
 		// No Highlights section found, append to end
 		lines.push(contentAfterFrontmatter);
 		lines.push("");
-		lines.push("## Highlights");
+		lines.push("## Moon Reader Highlights");
 		lines.push("");
 
 		for (const highlight of bookData.highlights) {

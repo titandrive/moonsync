@@ -719,8 +719,6 @@ export function generateBookTemplate(
 	author: string,
 	coverPath: string | null,
 	description: string | null,
-	rating: number | null,
-	ratingsCount: number | null,
 	publishedDate: string | null = null,
 	publisher: string | null = null,
 	pageCount: number | null = null,
@@ -740,12 +738,6 @@ export function generateBookTemplate(
 	lines.push(`last_synced: ${new Date().toISOString().split("T")[0]}`);
 	lines.push("highlights_count: 0");
 	lines.push("manual_note: true");
-	if (rating !== null) {
-		lines.push(`rating: ${rating}`);
-		if (ratingsCount !== null) {
-			lines.push(`ratings_count: ${ratingsCount}`);
-		}
-	}
 	if (publishedDate) {
 		lines.push(`published_date: "${escapeYaml(publishedDate)}"`);
 	}
@@ -776,12 +768,6 @@ export function generateBookTemplate(
 	lines.push(`# ${title}`);
 	if (author) {
 		lines.push(`**Author:** ${author}`);
-	}
-	if (rating !== null) {
-		const ratingText = ratingsCount !== null
-			? `**Rating:** ⭐ ${rating}/5 (${ratingsCount.toLocaleString()} ratings)`
-			: `**Rating:** ⭐ ${rating}/5`;
-		lines.push(ratingText);
 	}
 	lines.push("");
 

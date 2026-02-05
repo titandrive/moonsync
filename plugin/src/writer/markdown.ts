@@ -90,36 +90,41 @@ export function generateBookNote(bookData: BookData, settings: MoonSyncSettings)
 		lines.push("");
 	}
 
-	// Reading Progress section
-	if (settings.showReadingProgress && (progress !== null || currentChapter !== null || lastReadTimestamp !== null)) {
-		lines.push("## Reading Progress");
+	// Reading Progress section (always generate if data exists, use callout for CSS toggle)
+	if (progress !== null || currentChapter !== null || lastReadTimestamp !== null) {
+		lines.push("> [!moonsync-reading-progress]+ Reading Progress");
 		if (progress !== null) {
-			lines.push(`- **Progress:** ${progress.toFixed(1)}%`);
+			lines.push(`> - **Progress:** ${progress.toFixed(1)}%`);
 		}
 		if (currentChapter !== null) {
-			lines.push(`- **Chapter:** ${currentChapter}`);
+			lines.push(`> - **Chapter:** ${currentChapter}`);
 		}
 		if (lastReadTimestamp !== null) {
-			lines.push(`- **Last Read:** ${formatDate(lastReadTimestamp)}`);
+			lines.push(`> - **Last Read:** ${formatDate(lastReadTimestamp)}`);
 		}
 		lines.push("");
 	}
 
 	// Description section - prefer fetched description over Moon Reader's
+	// Always generate if data exists, use callout for CSS toggle
 	const description = fetchedDescription || book.description;
-	if (settings.showDescription && description && description.trim().length > 0) {
-		lines.push("## Description");
-		lines.push(description.trim());
+	if (description && description.trim().length > 0) {
+		lines.push("> [!moonsync-description]+ Description");
+		// Split description into lines and prefix each with >
+		const descLines = description.trim().split("\n");
+		for (const line of descLines) {
+			lines.push(`> ${line}`);
+		}
 		lines.push("");
 	}
 
 	// Highlights section
 	if (highlights.length > 0) {
-		lines.push("## Highlights");
+		lines.push("## Moon Reader Highlights");
 		lines.push("");
 
 		for (const highlight of highlights) {
-			lines.push(formatHighlight(highlight, settings.showHighlightColors, settings.showNotes));
+			lines.push(formatHighlight(highlight, settings.showHighlightColors));
 			lines.push("");
 		}
 	}
@@ -130,7 +135,7 @@ export function generateBookNote(bookData: BookData, settings: MoonSyncSettings)
 /**
  * Format a single highlight as an Obsidian callout
  */
-export function formatHighlight(highlight: MoonReaderHighlight, useColors: boolean, showNotes: boolean): string {
+export function formatHighlight(highlight: MoonReaderHighlight, useColors: boolean): string {
 	const calloutType = useColors ? getCalloutType(highlight.highlightColor) : "quote";
 	const dateStr = highlight.timestamp ? formatDate(highlight.timestamp) : "";
 	const chapterStr = highlight.chapter > 0 ? `Chapter ${highlight.chapter}` : "";
@@ -158,8 +163,8 @@ export function formatHighlight(highlight: MoonReaderHighlight, useColors: boole
 		}
 	}
 
-	// User note (if present and enabled)
-	if (showNotes && highlight.note && highlight.note.trim()) {
+	// User note (if present)
+	if (highlight.note && highlight.note.trim()) {
 		lines.push(">");
 		lines.push(`> ---`);
 		lines.push(`> **Note:** ${highlight.note.trim()}`);

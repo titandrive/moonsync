@@ -39,8 +39,6 @@ var DEFAULT_SETTINGS = {
   showReadingProgress: true,
   showHighlightColors: true,
   showCovers: true,
-  showRatings: false,
-  showNotes: true,
   showIndex: true,
   indexNoteTitle: "1. Library Index",
   generateBaseFile: true,
@@ -190,37 +188,28 @@ var MoonSyncSettingTab = class extends import_obsidian.PluginSettingTab {
       (toggle) => toggle.setValue(this.plugin.settings.showDescription).onChange(async (value) => {
         this.plugin.settings.showDescription = value;
         await this.plugin.saveSettings();
-      })
-    );
-    new import_obsidian.Setting(container).setName("Show Ratings").setDesc("Include Google Books rating in generated notes").addToggle(
-      (toggle) => toggle.setValue(this.plugin.settings.showRatings).onChange(async (value) => {
-        this.plugin.settings.showRatings = value;
-        await this.plugin.saveSettings();
+        this.plugin.updateContentVisibility();
       })
     );
     new import_obsidian.Setting(container).setName("Show Reading Progress").setDesc("Include reading progress section. Note: Progress data may not always be accurate depending on Moon Reader sync.").addToggle(
       (toggle) => toggle.setValue(this.plugin.settings.showReadingProgress).onChange(async (value) => {
         this.plugin.settings.showReadingProgress = value;
         await this.plugin.saveSettings();
+        this.plugin.updateContentVisibility();
       })
     );
     new import_obsidian.Setting(container).setName("Show Highlight Colors").setDesc("Use different callout styles based on highlight color. When off, all highlights appear as quotes.").addToggle(
       (toggle) => toggle.setValue(this.plugin.settings.showHighlightColors).onChange(async (value) => {
         this.plugin.settings.showHighlightColors = value;
         await this.plugin.saveSettings();
+        this.plugin.updateContentVisibility();
       })
     );
     new import_obsidian.Setting(container).setName("Show Book Covers").setDesc("Display book covers in notes. Covers are always downloaded to the 'covers' subfolder.").addToggle(
       (toggle) => toggle.setValue(this.plugin.settings.showCovers).onChange(async (value) => {
         this.plugin.settings.showCovers = value;
         await this.plugin.saveSettings();
-        this.plugin.updateCoverVisibility();
-      })
-    );
-    new import_obsidian.Setting(container).setName("Show Notes").setDesc("Include your personal notes/annotations below highlights").addToggle(
-      (toggle) => toggle.setValue(this.plugin.settings.showNotes).onChange(async (value) => {
-        this.plugin.settings.showNotes = value;
-        await this.plugin.saveSettings();
+        this.plugin.updateContentVisibility();
       })
     );
   }
@@ -1044,7 +1033,7 @@ var CreateBookModal = class extends import_obsidian3.Modal {
     contentEl.empty();
   }
 };
-function generateBookTemplate(title, author, coverPath, description, rating, ratingsCount, publishedDate = null, publisher = null, pageCount = null, genres = null, series = null, language = null) {
+function generateBookTemplate(title, author, coverPath, description, publishedDate = null, publisher = null, pageCount = null, genres = null, series = null, language = null) {
   const lines = [];
   const escapeYaml3 = (str) => str.replace(/"/g, '\\"').replace(/\n/g, " ");
   lines.push("---");
@@ -1055,12 +1044,6 @@ function generateBookTemplate(title, author, coverPath, description, rating, rat
   lines.push(`last_synced: ${(/* @__PURE__ */ new Date()).toISOString().split("T")[0]}`);
   lines.push("highlights_count: 0");
   lines.push("manual_note: true");
-  if (rating !== null) {
-    lines.push(`rating: ${rating}`);
-    if (ratingsCount !== null) {
-      lines.push(`ratings_count: ${ratingsCount}`);
-    }
-  }
   if (publishedDate) {
     lines.push(`published_date: "${escapeYaml3(publishedDate)}"`);
   }
@@ -1089,10 +1072,6 @@ function generateBookTemplate(title, author, coverPath, description, rating, rat
   lines.push(`# ${title}`);
   if (author) {
     lines.push(`**Author:** ${author}`);
-  }
-  if (rating !== null) {
-    const ratingText = ratingsCount !== null ? `**Rating:** \u2B50 ${rating}/5 (${ratingsCount.toLocaleString()} ratings)` : `**Rating:** \u2B50 ${rating}/5`;
-    lines.push(ratingText);
   }
   lines.push("");
   if (coverPath) {
@@ -1414,36 +1393,39 @@ function generateBookNote(bookData, settings) {
     lines.push(`![[${coverPath}|200]]`);
     lines.push("");
   }
-  if (settings.showReadingProgress && (progress !== null || currentChapter !== null || lastReadTimestamp !== null)) {
-    lines.push("## Reading Progress");
+  if (progress !== null || currentChapter !== null || lastReadTimestamp !== null) {
+    lines.push("> [!moonsync-reading-progress]+ Reading Progress");
     if (progress !== null) {
-      lines.push(`- **Progress:** ${progress.toFixed(1)}%`);
+      lines.push(`> - **Progress:** ${progress.toFixed(1)}%`);
     }
     if (currentChapter !== null) {
-      lines.push(`- **Chapter:** ${currentChapter}`);
+      lines.push(`> - **Chapter:** ${currentChapter}`);
     }
     if (lastReadTimestamp !== null) {
-      lines.push(`- **Last Read:** ${formatDate(lastReadTimestamp)}`);
+      lines.push(`> - **Last Read:** ${formatDate(lastReadTimestamp)}`);
     }
     lines.push("");
   }
   const description = fetchedDescription || book.description;
-  if (settings.showDescription && description && description.trim().length > 0) {
-    lines.push("## Description");
-    lines.push(description.trim());
+  if (description && description.trim().length > 0) {
+    lines.push("> [!moonsync-description]+ Description");
+    const descLines = description.trim().split("\n");
+    for (const line of descLines) {
+      lines.push(`> ${line}`);
+    }
     lines.push("");
   }
   if (highlights.length > 0) {
-    lines.push("## Highlights");
+    lines.push("## Moon Reader Highlights");
     lines.push("");
     for (const highlight of highlights) {
-      lines.push(formatHighlight(highlight, settings.showHighlightColors, settings.showNotes));
+      lines.push(formatHighlight(highlight, settings.showHighlightColors));
       lines.push("");
     }
   }
   return lines.join("\n");
 }
-function formatHighlight(highlight, useColors, showNotes) {
+function formatHighlight(highlight, useColors) {
   const calloutType = useColors ? getCalloutType(highlight.highlightColor) : "quote";
   const dateStr = highlight.timestamp ? formatDate(highlight.timestamp) : "";
   const chapterStr = highlight.chapter > 0 ? `Chapter ${highlight.chapter}` : "";
@@ -1462,7 +1444,7 @@ function formatHighlight(highlight, useColors, showNotes) {
       lines.push(`> ${line}`);
     }
   }
-  if (showNotes && highlight.note && highlight.note.trim()) {
+  if (highlight.note && highlight.note.trim()) {
     lines.push(">");
     lines.push(`> ---`);
     lines.push(`> **Note:** ${highlight.note.trim()}`);
@@ -1997,7 +1979,7 @@ function mergeManualNoteWithMoonReader(existingContent, bookData, settings) {
   lines.push("");
   lines.push(contentAfterFrontmatter);
   lines.push("");
-  lines.push("## Moon+ Reader Highlights");
+  lines.push("## Moon Reader Highlights");
   lines.push("");
   if (settings.showReadingProgress && (bookData.progress !== null || bookData.currentChapter !== null)) {
     lines.push("**Reading Progress:**");
@@ -2047,8 +2029,8 @@ function mergeCustomMetadataWithHighlights(existingContent, bookData, settings) 
     }
   }
   lines.push("---");
-  const highlightsHeaderPattern = /\n## Highlights\n/;
-  const nextSectionPattern = /\n## [^H]/;
+  const highlightsHeaderPattern = /\n## (Moon Reader )?Highlights\n/;
+  const nextSectionPattern = /\n## (?!Moon Reader Highlights|Highlights)[^\n]/;
   const highlightsMatch = contentAfterFrontmatter.match(highlightsHeaderPattern);
   if (highlightsMatch && highlightsMatch.index !== void 0) {
     const beforeHighlights = contentAfterFrontmatter.slice(0, highlightsMatch.index);
@@ -2061,7 +2043,7 @@ function mergeCustomMetadataWithHighlights(existingContent, bookData, settings) 
       afterHighlights = remainingContent.slice(nextSectionMatch.index);
     }
     lines.push("");
-    lines.push("## Highlights");
+    lines.push("## Moon Reader Highlights");
     lines.push("");
     if (settings.showReadingProgress && (bookData.progress !== null || bookData.currentChapter !== null)) {
       lines.push("**Reading Progress:**");
@@ -2083,7 +2065,7 @@ function mergeCustomMetadataWithHighlights(existingContent, bookData, settings) 
   } else {
     lines.push(contentAfterFrontmatter);
     lines.push("");
-    lines.push("## Highlights");
+    lines.push("## Moon Reader Highlights");
     lines.push("");
     for (const highlight of bookData.highlights) {
       lines.push(formatHighlight(highlight, settings.showHighlightColors, settings.showNotes));
@@ -2588,7 +2570,7 @@ var MoonSyncPlugin = class extends import_obsidian7.Plugin {
     await this.loadSettings();
     this.addSettingTab(new MoonSyncSettingTab(this.app, this));
     this.updateRibbonIcon();
-    this.updateCoverVisibility();
+    this.updateContentVisibility();
     this.addCommand({
       id: "sync-now",
       name: "Sync Now",
@@ -2639,16 +2621,29 @@ var MoonSyncPlugin = class extends import_obsidian7.Plugin {
       );
     }
   }
-  updateCoverVisibility() {
+  updateContentVisibility() {
     if (this.styleEl) {
       this.styleEl.remove();
       this.styleEl = null;
     }
     this.styleEl = document.createElement("style");
-    this.styleEl.id = "moonsync-cover-visibility";
+    this.styleEl.id = "moonsync-content-visibility";
+    const rules = [];
+    rules.push(`.callout[data-callout="moonsync-reading-progress"] { --callout-color: var(--callout-success); }`);
+    rules.push(`.callout[data-callout="moonsync-description"] { --callout-color: var(--callout-quote); }`);
     if (!this.settings.showCovers) {
-      this.styleEl.textContent = `.internal-embed[src*="covers/"] { display: none !important; }`;
+      rules.push(`.internal-embed[src*="covers/"] { display: none !important; }`);
     }
+    if (!this.settings.showReadingProgress) {
+      rules.push(`.callout[data-callout="moonsync-reading-progress"] { display: none !important; }`);
+    }
+    if (!this.settings.showDescription) {
+      rules.push(`.callout[data-callout="moonsync-description"] { display: none !important; }`);
+    }
+    if (!this.settings.showHighlightColors) {
+      rules.push(`.callout[data-callout="info"], .callout[data-callout="tip"], .callout[data-callout="warning"] { --callout-color: var(--callout-quote); }`);
+    }
+    this.styleEl.textContent = rules.join("\n");
     document.head.appendChild(this.styleEl);
   }
   async runSync() {
@@ -2702,7 +2697,7 @@ var MoonSyncPlugin = class extends import_obsidian7.Plugin {
    * Create a new book note from selected book info
    */
   async createBookNote(bookInfo) {
-    var _a, _b, _c, _d, _e, _f, _g, _h, _i;
+    var _a, _b, _c, _d, _e, _f, _g;
     const title = bookInfo.title || "Untitled";
     const progressNotice = new import_obsidian7.Notice("MoonSync: Creating book note...", 0);
     try {
@@ -2740,14 +2735,12 @@ var MoonSyncPlugin = class extends import_obsidian7.Plugin {
         bookInfo.author || "",
         coverPath,
         this.settings.showDescription ? (_a = bookInfo.description) != null ? _a : null : null,
-        this.settings.showRatings ? (_b = bookInfo.rating) != null ? _b : null : null,
-        this.settings.showRatings ? (_c = bookInfo.ratingsCount) != null ? _c : null : null,
-        (_d = bookInfo.publishedDate) != null ? _d : null,
-        (_e = bookInfo.publisher) != null ? _e : null,
-        (_f = bookInfo.pageCount) != null ? _f : null,
-        (_g = bookInfo.genres) != null ? _g : null,
-        (_h = bookInfo.series) != null ? _h : null,
-        (_i = bookInfo.language) != null ? _i : null
+        (_b = bookInfo.publishedDate) != null ? _b : null,
+        (_c = bookInfo.publisher) != null ? _c : null,
+        (_d = bookInfo.pageCount) != null ? _d : null,
+        (_e = bookInfo.genres) != null ? _e : null,
+        (_f = bookInfo.series) != null ? _f : null,
+        (_g = bookInfo.language) != null ? _g : null
       );
       await this.app.vault.create(filePath, content);
       progressNotice.hide();

@@ -63,8 +63,6 @@ export interface MoonSyncSettings {
 	showReadingProgress: boolean;
 	showHighlightColors: boolean;
 	showCovers: boolean;
-	showRatings: boolean;
-	showNotes: boolean;
 	showIndex: boolean;
 	indexNoteTitle: string;
 	generateBaseFile: boolean;
@@ -84,8 +82,6 @@ export const DEFAULT_SETTINGS: MoonSyncSettings = {
 	showReadingProgress: true,
 	showHighlightColors: true,
 	showCovers: true,
-	showRatings: false,
-	showNotes: true,
 	showIndex: true,
 	indexNoteTitle: "1. Library Index",
 	generateBaseFile: true,

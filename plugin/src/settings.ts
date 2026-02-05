@@ -181,18 +181,7 @@ export class MoonSyncSettingTab extends PluginSettingTab {
 					.onChange(async (value) => {
 						this.plugin.settings.showDescription = value;
 						await this.plugin.saveSettings();
-					})
-			);
-
-		new Setting(container)
-			.setName("Show Ratings")
-			.setDesc("Include Google Books rating in generated notes")
-			.addToggle((toggle) =>
-				toggle
-					.setValue(this.plugin.settings.showRatings)
-					.onChange(async (value) => {
-						this.plugin.settings.showRatings = value;
-						await this.plugin.saveSettings();
+						this.plugin.updateContentVisibility();
 					})
 			);
 
@@ -205,6 +194,7 @@ export class MoonSyncSettingTab extends PluginSettingTab {
 					.onChange(async (value) => {
 						this.plugin.settings.showReadingProgress = value;
 						await this.plugin.saveSettings();
+						this.plugin.updateContentVisibility();
 					})
 			);
 
@@ -217,6 +207,7 @@ export class MoonSyncSettingTab extends PluginSettingTab {
 					.onChange(async (value) => {
 						this.plugin.settings.showHighlightColors = value;
 						await this.plugin.saveSettings();
+						this.plugin.updateContentVisibility();
 					})
 			);
 
@@ -229,19 +220,7 @@ export class MoonSyncSettingTab extends PluginSettingTab {
 					.onChange(async (value) => {
 						this.plugin.settings.showCovers = value;
 						await this.plugin.saveSettings();
-						this.plugin.updateCoverVisibility();
-					})
-			);
-
-		new Setting(container)
-			.setName("Show Notes")
-			.setDesc("Include your personal notes/annotations below highlights")
-			.addToggle((toggle) =>
-				toggle
-					.setValue(this.plugin.settings.showNotes)
-					.onChange(async (value) => {
-						this.plugin.settings.showNotes = value;
-						await this.plugin.saveSettings();
+						this.plugin.updateContentVisibility();
 					})
 			);
 	}

@@ -22,8 +22,8 @@ export default class MoonSyncPlugin extends Plugin {
 		// Add ribbon icon if enabled
 		this.updateRibbonIcon();
 
-		// Initialize cover visibility CSS
-		this.updateCoverVisibility();
+		// Initialize content visibility CSS
+		this.updateContentVisibility();
 
 		// Add sync command
 		this.addCommand({
@@ -94,7 +94,7 @@ export default class MoonSyncPlugin extends Plugin {
 		}
 	}
 
-	updateCoverVisibility() {
+	updateContentVisibility() {
 		// Remove existing style element if present
 		if (this.styleEl) {
 			this.styleEl.remove();
@@ -103,13 +103,33 @@ export default class MoonSyncPlugin extends Plugin {
 
 		// Create new style element
 		this.styleEl = document.createElement("style");
-		this.styleEl.id = "moonsync-cover-visibility";
+		this.styleEl.id = "moonsync-content-visibility";
 
-		// If covers should be hidden, add CSS to hide them
+		// Build CSS rules based on settings
+		const rules: string[] = [];
+
+		// Style moonsync callouts
+		rules.push(`.callout[data-callout="moonsync-reading-progress"] { --callout-color: var(--callout-success); }`);
+		rules.push(`.callout[data-callout="moonsync-description"] { --callout-color: var(--callout-quote); }`);
+
 		if (!this.settings.showCovers) {
-			this.styleEl.textContent = `.internal-embed[src*="covers/"] { display: none !important; }`;
+			rules.push(`.internal-embed[src*="covers/"] { display: none !important; }`);
 		}
 
+		if (!this.settings.showReadingProgress) {
+			rules.push(`.callout[data-callout="moonsync-reading-progress"] { display: none !important; }`);
+		}
+
+		if (!this.settings.showDescription) {
+			rules.push(`.callout[data-callout="moonsync-description"] { display: none !important; }`);
+		}
+
+		// When highlight colors are off, make all highlight callouts look like quotes
+		if (!this.settings.showHighlightColors) {
+			rules.push(`.callout[data-callout="info"], .callout[data-callout="tip"], .callout[data-callout="warning"] { --callout-color: var(--callout-quote); }`);
+		}
+
+		this.styleEl.textContent = rules.join("\n");
 		document.head.appendChild(this.styleEl);
 	}
 
@@ -220,8 +240,6 @@ export default class MoonSyncPlugin extends Plugin {
 				bookInfo.author || "",
 				coverPath,
 				this.settings.showDescription ? (bookInfo.description ?? null) : null,
-				this.settings.showRatings ? (bookInfo.rating ?? null) : null,
-				this.settings.showRatings ? (bookInfo.ratingsCount ?? null) : null,
 				bookInfo.publishedDate ?? null,
 				bookInfo.publisher ?? null,
 				bookInfo.pageCount ?? null,
