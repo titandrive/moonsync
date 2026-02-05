@@ -78,8 +78,9 @@ export class MoonSyncSettingTab extends PluginSettingTab {
 		container.createEl("p", { text: "Set up your Moon Reader backup location and note output folder.", cls: "moonsync-section-desc" });
 
 		let textComponent: TextComponent;
+		let validationEl: HTMLElement;
 
-		new Setting(container)
+		const pathSetting = new Setting(container)
 			.setName("Moon Reader Dropbox Path")
 			.setDesc(
 				"Path to your Books folder in Dropbox (usually Dropbox/Apps/Books). The plugin will find the hidden .Moon+ folder automatically."
@@ -92,6 +93,7 @@ export class MoonSyncSettingTab extends PluginSettingTab {
 					.onChange(async (value) => {
 						this.plugin.settings.dropboxPath = value;
 						await this.plugin.saveSettings();
+						await this.validateDropboxPath(value, validationEl);
 					});
 			})
 			.addButton((button) =>
@@ -101,9 +103,18 @@ export class MoonSyncSettingTab extends PluginSettingTab {
 						this.plugin.settings.dropboxPath = folder;
 						textComponent.setValue(folder);
 						await this.plugin.saveSettings();
+						await this.validateDropboxPath(folder, validationEl);
 					}
 				})
 			);
+
+		// Add validation message element
+		validationEl = pathSetting.descEl.createDiv({ cls: "moonsync-path-validation" });
+
+		// Validate on display
+		if (this.plugin.settings.dropboxPath) {
+			this.validateDropboxPath(this.plugin.settings.dropboxPath, validationEl);
+		}
 
 		new Setting(container)
 			.setName("Output Folder")
@@ -372,6 +383,31 @@ export class MoonSyncSettingTab extends PluginSettingTab {
 					window.open("https://ko-fi.com/titandrive");
 				})
 			);
+	}
+
+	private async validateDropboxPath(path: string, validationEl: HTMLElement): Promise<void> {
+		validationEl.empty();
+
+		if (!path) {
+			return;
+		}
+
+		const { existsSync } = require("fs");
+		const { join } = require("path");
+
+		const cachePath = join(path, ".Moon+", "Cache");
+
+		if (existsSync(cachePath)) {
+			validationEl.createSpan({
+				text: "✓ Moon Reader cache folder found",
+				attr: { style: "color: var(--text-success); font-size: 0.85em; margin-top: 0.5em; display: block;" }
+			});
+		} else {
+			validationEl.createSpan({
+				text: "⚠ .Moon+/Cache folder not found at this path",
+				attr: { style: "color: var(--text-warning); font-size: 0.85em; margin-top: 0.5em; display: block;" }
+			});
+		}
 	}
 
 	private async openFolderPicker(): Promise<string | null> {

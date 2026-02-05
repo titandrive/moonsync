@@ -130,13 +130,15 @@ var MoonSyncSettingTab = class extends import_obsidian.PluginSettingTab {
     container.createEl("h3", { text: "Configuration" });
     container.createEl("p", { text: "Set up your Moon Reader backup location and note output folder.", cls: "moonsync-section-desc" });
     let textComponent;
-    new import_obsidian.Setting(container).setName("Moon Reader Dropbox Path").setDesc(
+    let validationEl;
+    const pathSetting = new import_obsidian.Setting(container).setName("Moon Reader Dropbox Path").setDesc(
       "Path to your Books folder in Dropbox (usually Dropbox/Apps/Books). The plugin will find the hidden .Moon+ folder automatically."
     ).addText((text) => {
       textComponent = text;
       text.setPlaceholder("/Users/you/Dropbox/Apps/Books").setValue(this.plugin.settings.dropboxPath).onChange(async (value) => {
         this.plugin.settings.dropboxPath = value;
         await this.plugin.saveSettings();
+        await this.validateDropboxPath(value, validationEl);
       });
     }).addButton(
       (button) => button.setButtonText("Browse").onClick(async () => {
@@ -145,9 +147,14 @@ var MoonSyncSettingTab = class extends import_obsidian.PluginSettingTab {
           this.plugin.settings.dropboxPath = folder;
           textComponent.setValue(folder);
           await this.plugin.saveSettings();
+          await this.validateDropboxPath(folder, validationEl);
         }
       })
     );
+    validationEl = pathSetting.descEl.createDiv({ cls: "moonsync-path-validation" });
+    if (this.plugin.settings.dropboxPath) {
+      this.validateDropboxPath(this.plugin.settings.dropboxPath, validationEl);
+    }
     new import_obsidian.Setting(container).setName("Output Folder").setDesc("Folder in your vault where book notes will be created").addText(
       (text) => text.setPlaceholder("Books").setValue(this.plugin.settings.outputFolder).onChange(async (value) => {
         this.plugin.settings.outputFolder = value || "Books";
@@ -302,6 +309,26 @@ var MoonSyncSettingTab = class extends import_obsidian.PluginSettingTab {
         window.open("https://ko-fi.com/titandrive");
       })
     );
+  }
+  async validateDropboxPath(path, validationEl) {
+    validationEl.empty();
+    if (!path) {
+      return;
+    }
+    const { existsSync } = require("fs");
+    const { join: join3 } = require("path");
+    const cachePath = join3(path, ".Moon+", "Cache");
+    if (existsSync(cachePath)) {
+      validationEl.createSpan({
+        text: "\u2713 Moon Reader cache folder found",
+        attr: { style: "color: var(--text-success); font-size: 0.85em; margin-top: 0.5em; display: block;" }
+      });
+    } else {
+      validationEl.createSpan({
+        text: "\u26A0 .Moon+/Cache folder not found at this path",
+        attr: { style: "color: var(--text-warning); font-size: 0.85em; margin-top: 0.5em; display: block;" }
+      });
+    }
   }
   async openFolderPicker() {
     const { exec } = require("child_process");
