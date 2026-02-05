@@ -19,6 +19,7 @@ export interface SyncResult {
 	totalNotes: number;
 	isFirstSync: boolean;
 	errors: string[];
+	failedBooks: { title: string; error: string }[];
 }
 
 /**
@@ -40,6 +41,7 @@ export async function syncFromMoonReader(
 		totalNotes: 0,
 		isFirstSync: false,
 		errors: [],
+		failedBooks: [],
 	};
 
 	// Single progress notice that we'll hide when done
@@ -95,9 +97,12 @@ export async function syncFromMoonReader(
 				}
 				result.booksProcessed++;
 			} catch (error) {
-				result.errors.push(
-					`Error processing "${bookData.book.title}": ${error}`
-				);
+				const errorMsg = error instanceof Error ? error.message : String(error);
+				result.failedBooks.push({
+					title: bookData.book.title,
+					error: errorMsg
+				});
+				result.errors.push(`Error processing "${bookData.book.title}": ${errorMsg}`);
 			}
 		}
 
@@ -116,9 +121,12 @@ export async function syncFromMoonReader(
 						cacheModified = true;
 					}
 				} catch (error) {
-					result.errors.push(
-						`Error processing custom book "${customBook.title}": ${error}`
-					);
+					const errorMsg = error instanceof Error ? error.message : String(error);
+					result.failedBooks.push({
+						title: customBook.title,
+						error: errorMsg
+					});
+					result.errors.push(`Error processing custom book "${customBook.title}": ${errorMsg}`);
 				}
 			}
 		}
@@ -1027,11 +1035,13 @@ export async function refreshBaseFile(app: App, settings: MoonSyncSettings): Pro
  * Display sync results to the user
  */
 export function showSyncResults(app: App, result: SyncResult, settings: MoonSyncSettings): void {
+	const hasFailedBooks = result.failedBooks && result.failedBooks.length > 0;
+
 	if (result.success) {
-		if (result.booksProcessed === 0) {
+		if (result.booksProcessed === 0 && !hasFailedBooks) {
 			new Notice("MoonSync: No books with highlights to sync");
-		} else if (result.isFirstSync) {
-			// Show summary modal on first sync
+		} else if (result.isFirstSync || hasFailedBooks) {
+			// Show summary modal on first sync or if there were failures
 			new SyncSummaryModal(app, result, settings).open();
 		} else {
 			const totalProcessed = result.booksCreated + result.booksUpdated;
@@ -1044,6 +1054,7 @@ export function showSyncResults(app: App, result: SyncResult, settings: MoonSync
 			}
 		}
 	} else {
+		// Complete failure - show error
 		new Notice(`MoonSync: Sync failed - ${result.errors[0]}`);
 	}
 

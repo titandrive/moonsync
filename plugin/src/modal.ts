@@ -19,8 +19,10 @@ export class SyncSummaryModal extends Modal {
 		contentEl.empty();
 		contentEl.addClass("moonsync-summary-modal");
 
-		// Title
-		contentEl.createEl("h2", { text: "MoonSync Import Complete" });
+		// Title - changes if there were failures
+		const hasFailures = this.result.failedBooks && this.result.failedBooks.length > 0;
+		const title = hasFailures ? "MoonSync Import Complete (with errors)" : "MoonSync Import Complete";
+		contentEl.createEl("h2", { text: title });
 
 		// Stats container
 		const statsContainer = contentEl.createDiv({ cls: "moonsync-stats" });
@@ -32,6 +34,18 @@ export class SyncSummaryModal extends Modal {
 		// Bottom row: Highlights, Notes
 		this.createStatItem(statsContainer, this.result.totalHighlights.toString(), "Highlights");
 		this.createStatItem(statsContainer, this.result.totalNotes.toString(), "Notes");
+
+		// Show failed books if any
+		if (hasFailures) {
+			const failedSection = contentEl.createDiv({ cls: "moonsync-failed-section" });
+			failedSection.createEl("h3", { text: `Failed (${this.result.failedBooks.length})` });
+			const failedList = failedSection.createEl("ul", { cls: "moonsync-failed-list" });
+			for (const failed of this.result.failedBooks) {
+				const item = failedList.createEl("li");
+				item.createSpan({ text: failed.title, cls: "moonsync-failed-title" });
+				item.createSpan({ text: ` - ${failed.error}`, cls: "moonsync-failed-error" });
+			}
+		}
 
 		// Settings link
 		const settingsLink = contentEl.createDiv({ cls: "moonsync-settings-link" });

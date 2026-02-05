@@ -306,3 +306,36 @@
 	color: var(--text-faint);
 	margin-top: 0.25em;
 }
+
+/* Failed books section in sync summary */
+.moonsync-failed-section {
+	margin-top: 1em;
+	padding: 1em;
+	background: var(--background-secondary);
+	border-radius: 8px;
+	border-left: 3px solid var(--text-error);
+}
+
+.moonsync-failed-section h3 {
+	margin: 0 0 0.5em 0;
+	color: var(--text-error);
+	font-size: 0.95em;
+}
+
+.moonsync-failed-list {
+	margin: 0;
+	padding-left: 1.2em;
+	font-size: 0.85em;
+}
+
+.moonsync-failed-list li {
+	margin-bottom: 0.3em;
+}
+
+.moonsync-failed-title {
+	font-weight: 500;
+}
+
+.moonsync-failed-error {
+	color: var(--text-muted);
+}
