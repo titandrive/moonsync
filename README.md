@@ -5,11 +5,11 @@ Sync your reading highlights, notes, and progress from Moon+ Reader to Obsidian.
 <img src="BookScreenshot.png" alt="Book note example" width="420">
 
 ## How It Works
-Whenever you sync a book to the cloud in Moon Reader, it saves this data to two cache files in Dropbox. These files cotnain all of your book's meta data including highlights, notes, reading progress and book information. MoonSync reads this data and syncs it to your Obsidian vault. 
+Whenever you sync a book to the cloud in Moon Reader, it saves this data to two cache files in Dropbox. These files contain all of your book's metadata including highlights, notes, reading progress and book information. MoonSync reads this data and syncs it to your Obsidian vault. 
 
-When MoonSync detects a new book, it  pulls metadata from Google Books and Open Library to create a note containing all of your highlights, notes, and book progress as well as book information (cover, genere, date published, etc). 
+When MoonSync detects a new book, it pulls metadata from Google Books and Open Library to create a note containing all of your highlights, notes, and book progress as well as book information (cover, genre, date published, etc). 
 
-Moon Sync will then keep track of that book and update the note as you make new highlights and your reading progress changes. 
+MoonSync will then keep track of that book and update the note as you make new highlights and your reading progress changes. 
 
 **Data flow:** Moon Reader → Dropbox Cloud Sync → MoonSync → Obsidian
 
@@ -28,11 +28,11 @@ Moon Sync will then keep track of that book and update the note as you make new 
 - [BRAT](https://github.com/TfTHacker/obsidian42-brat) Obsidian Plugin
 
 ## Installation
-MoonSync can be installed either via the BRAT Plugin (reccomended) or via a custom install:
+MoonSync can be installed either via the BRAT Plugin (recommended) or via a custom install:
 
 
 ### BRAT Installation
-Using BRAT is the reccomended, and easiest, way to install custom Obsidin plugins that are not available in the Obsidian Community Store.
+Using BRAT is the recommended, and easiest, way to install custom Obsidian plugins that are not available in the Obsidian Community Store.
 
 1. Install BRAT via community plugins. 
 2. Open BRAT and select "Add Beta Plugin"
@@ -57,10 +57,10 @@ Once MoonSync is installed, you will need to configure it before it can complete
 *Note: /Books will appear empty as the cache files MoonSync relies on are contained in a hidden folder (/Books/.Moon+)*
 5. Press Sync
 
-By default, MoonSync will now Sync your books anytime you open Obsidian. You can also trigger a manual sync via the ribbon menu shortcut or Command Pallete (see below) 
+By default, MoonSync will now Sync your books anytime you open Obsidian. You can also trigger a manual sync via the ribbon menu shortcut or Command Palette (see below) 
 
 ## Manual Book Import
-If you do not want to use automartic syncing, via Dropbox, MoonSync also supports manual exports. 
+If you do not want to use automatic syncing, via Dropbox, MoonSync also supports manual exports. 
 
 First, export your notes: 
 1. While viewing a book in Moon Reader, open up the Bookmarks bar. You should see all of your existing notes and highlights 
@@ -71,14 +71,14 @@ First, export your notes:
 
 Once you have exported your notes, you can import it using MoonSync
 1. Open the note that you just created.
-2. While viewing the note, open the Command Pallete (`Cmd/Ctrl + P`)
+2. While viewing the note, open the Command Palette (`Cmd/Ctrl + P`)
 3. Choose `MoonSync: Import Note`
 
 ## Custom Books
 Sometimes you may have books you wish to keep track of that you read outside of Moon Reader. MoonSync supports creating custom books that can be tracked in the same manner. 
 
 To create a custom book, 
-1. Open the Command Pallete and select `MoonSync: Create Book Note`. 
+1. Open the Command Palette and select `MoonSync: Create Book Note`. 
 2. Search for your book in the search prompt
 3. Select your book
 
@@ -86,7 +86,7 @@ MoonSync will import all available metadata and create a new book note in `/Book
 
 If in the future, you begin reading that same book in Moon Reader, and make more highlights, MoonSync will intelligently update this note so you won't lose any of your past highlights. 
 
-## Command Pallete
+## Command Palette
 
 MoonSync provides several commands accessible via the command palette (`Cmd/Ctrl + P`):
 
@@ -140,7 +140,7 @@ MoonSync automatically generates an index and base note to give you different wa
 - **Index Note Title** - By default, the index note is titled `1. Index Note` so that it stays at the top of the list. You can change the name here. 
 - **Show Cover Collage** - Show or hide the cover collage 
 - **Cover Collage Limit** - Control how many covers show in the collage. Setting it to `0` will show covers for all books in the index. 
-- **Cover Collage Sort** - Controls whether the cover collage is sorted alphabetcally or chronologically. 
+- **Cover Collage Sort** - Controls whether the cover collage is sorted alphabetically or chronologically. 
 
 #### Obsidian Bases
 - **Generate Base File** - Control whether MoonSync will generate a Base file. MoonSync, by default, will generate a base upon first sync. Disabling this will delete the base file. 
@@ -151,7 +151,7 @@ MoonSync automatically generates an index and base note to give you different wa
 
 #### Library Index
 
-When enabled, MoonSync generates an index file, titles `1. Library Index.md`, that shows the following: 
+When enabled, MoonSync generates an index file titled `1. Library Index.md`, that shows the following: 
 
 - Visual grid of book covers. Clicking on a cover will take you to the associated note. 
 - Summary statistics (total books, highlights, notes, average progress)
@@ -205,6 +205,9 @@ It also provides a Library that shows a breakdown of the following statistics pe
 ### Wrong book metadata
 - Use "Fetch Book Metadata" command to search and select the correct book
 - This sets `custom_metadata: true` to prevent future syncs from changing it
+
+## AI Disclosure
+This plugin was made with the assistance of Claude Code. 
 
 ## License
 
