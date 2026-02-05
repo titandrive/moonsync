@@ -1,8 +1,8 @@
-import { App, Modal, Setting, Notice, normalizePath } from "obsidian";
+import { App, Modal, Setting, normalizePath } from "obsidian";
 import { SyncResult } from "./sync";
 import { MoonSyncSettings } from "./types";
 import { generateFilename } from "./writer/markdown";
-import { fetchBookInfo, downloadCover, fetchMultipleBookCovers, BookInfoResult } from "./covers";
+import { fetchMultipleBookCovers, BookInfoResult } from "./covers";
 
 export class SyncSummaryModal extends Modal {
 	private result: SyncResult;
@@ -67,90 +67,6 @@ export class SyncSummaryModal extends Modal {
 		const item = container.createDiv({ cls: "moonsync-stat-item" });
 		item.createDiv({ cls: "moonsync-stat-value", text: value });
 		item.createDiv({ cls: "moonsync-stat-label", text: label });
-	}
-
-	onClose() {
-		const { contentEl } = this;
-		contentEl.empty();
-	}
-}
-
-/**
- * Modal for specifying search query when re-fetching cover
- */
-export class RefetchCoverModal extends Modal {
-	private onSubmit: (title: string, author: string) => void;
-
-	private title = "";
-	private author = "";
-
-	constructor(
-		app: App,
-		defaultTitle: string,
-		defaultAuthor: string,
-		onSubmit: (title: string, author: string) => void
-	) {
-		super(app);
-		this.title = defaultTitle;
-		this.author = defaultAuthor;
-		this.onSubmit = onSubmit;
-	}
-
-	onOpen() {
-		const { contentEl } = this;
-		contentEl.empty();
-		contentEl.addClass("moonsync-create-book-modal");
-
-		contentEl.createEl("h2", { text: "Re-fetch Book Cover" });
-		contentEl.createEl("p", {
-			text: "Edit the search query to find a different cover.",
-			cls: "setting-item-description"
-		});
-
-		new Setting(contentEl)
-			.setName("Title")
-			.setDesc("Book title to search for")
-			.addText((text) => {
-				text
-					.setPlaceholder("Enter book title")
-					.setValue(this.title)
-					.onChange((value) => {
-						this.title = value;
-					});
-				// Focus the title input
-				setTimeout(() => text.inputEl.focus(), 10);
-			});
-
-		new Setting(contentEl)
-			.setName("Author")
-			.setDesc("Author name (optional)")
-			.addText((text) =>
-				text
-					.setPlaceholder("Enter author name")
-					.setValue(this.author)
-					.onChange((value) => {
-						this.author = value;
-					})
-			);
-
-		// Buttons
-		const buttonContainer = contentEl.createDiv({ cls: "moonsync-button-container" });
-
-		const cancelButton = buttonContainer.createEl("button", { text: "Cancel" });
-		cancelButton.addEventListener("click", () => this.close());
-
-		const searchButton = buttonContainer.createEl("button", {
-			text: "Search & Update",
-			cls: "mod-cta",
-		});
-		searchButton.addEventListener("click", () => {
-			if (!this.title.trim()) {
-				new Notice("Please enter a book title");
-				return;
-			}
-			this.onSubmit(this.title.trim(), this.author.trim());
-			this.close();
-		});
 	}
 
 	onClose() {
