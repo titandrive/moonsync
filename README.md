@@ -180,7 +180,7 @@ It also provides a Library that shows a breakdown of the following statistics pe
 - Language
 
 <img src="BaseScreenshot2.png" alt="Base Library View" width="420">
-<br><br>
+<br>
 <img src="BaseScreenshot.png" alt="Base Gallery View" width="420">
 
 ## Privacy & Security
