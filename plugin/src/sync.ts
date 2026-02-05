@@ -84,7 +84,10 @@ export async function syncFromMoonReader(
 		let cacheModified = false;
 
 		// Process each book
-		for (const bookData of booksWithHighlights) {
+		const totalBooks = booksWithHighlights.length;
+		for (let i = 0; i < booksWithHighlights.length; i++) {
+			const bookData = booksWithHighlights[i];
+			progressNotice.setMessage(`MoonSync: ${bookData.book.title} (${i + 1}/${totalBooks})`);
 			try {
 				const processed = await processBook(app, outputPath, bookData, settings, result, cache);
 				if (processed) {
@@ -102,16 +105,21 @@ export async function syncFromMoonReader(
 		const scannedBooks = await scanAllBookNotes(app, outputPath);
 		const customBooks = scannedBooks.filter(book => !book.isMoonReader);
 
-		for (const customBook of customBooks) {
-			try {
-				const processed = await processCustomBook(app, outputPath, customBook, settings, result, cache);
-				if (processed) {
-					cacheModified = true;
+		if (customBooks.length > 0) {
+			const totalCustom = customBooks.length;
+			for (let i = 0; i < customBooks.length; i++) {
+				const customBook = customBooks[i];
+				progressNotice.setMessage(`MoonSync: ${customBook.title} (${i + 1}/${totalCustom} custom)`);
+				try {
+					const processed = await processCustomBook(app, outputPath, customBook, settings, result, cache);
+					if (processed) {
+						cacheModified = true;
+					}
+				} catch (error) {
+					result.errors.push(
+						`Error processing custom book "${customBook.title}": ${error}`
+					);
 				}
-			} catch (error) {
-				result.errors.push(
-					`Error processing custom book "${customBook.title}": ${error}`
-				);
 			}
 		}
 
@@ -126,7 +134,7 @@ export async function syncFromMoonReader(
 			const indexExists = await app.vault.adapter.exists(indexPath);
 
 			// Check if there are manually-created book notes by comparing counts
-			const scannedBooks = await scanAllBookNotes(app, outputPath);
+			// Reuse scannedBooks from earlier scan instead of scanning again
 			const indexFilename = `${settings.indexNoteTitle}.md`;
 			const filteredScanned = scannedBooks.filter((b) => !b.filePath.endsWith(indexFilename));
 			const totalBookNotes = filteredScanned.length;
@@ -258,8 +266,6 @@ function mergeManualNoteWithMoonReader(
 			    line.startsWith("genres:") ||
 			    line.startsWith("series:") ||
 			    line.startsWith("language:") ||
-			    line.startsWith("rating:") ||
-			    line.startsWith("ratings_count:") ||
 			    line.trim().startsWith("-")) { // Skip genre array items
 				continue;
 			}
@@ -846,8 +852,6 @@ function updateCustomBookFrontmatter(
 		    line.startsWith("genres:") ||
 		    line.startsWith("series:") ||
 		    line.startsWith("language:") ||
-		    line.startsWith("rating:") ||
-		    line.startsWith("ratings_count:") ||
 		    line.startsWith("cover:")) {
 			if (line.startsWith("genres:")) {
 				skipNextLine = true;

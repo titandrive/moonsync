@@ -1261,8 +1261,6 @@ async function parseAnnotationFiles(dropboxPath, trackBooksWithoutHighlights = f
               lastReadTimestamp: null,
               coverPath: null,
               fetchedDescription: null,
-              rating: null,
-              ratingsCount: null,
               publishedDate: null,
               publisher: null,
               pageCount: null,
@@ -1323,8 +1321,6 @@ async function parseAnnotationFiles(dropboxPath, trackBooksWithoutHighlights = f
             lastReadTimestamp: progressData.timestamp,
             coverPath: null,
             fetchedDescription: null,
-            rating: null,
-            ratingsCount: null,
             publishedDate: null,
             publisher: null,
             pageCount: null,
@@ -1803,8 +1799,14 @@ function scannedBookToBookData(scanned) {
     lastReadTimestamp: scanned.lastReadTimestamp,
     coverPath: scanned.coverPath,
     fetchedDescription: null,
-    rating: null,
-    ratingsCount: null
+    publishedDate: null,
+    publisher: null,
+    pageCount: null,
+    genres: null,
+    series: null,
+    isbn10: null,
+    isbn13: null,
+    language: null
   };
 }
 function mergeBookLists(moonReaderBooks, scannedBooks) {
@@ -1882,7 +1884,10 @@ async function syncFromMoonReader(app, settings, wasmPath) {
     );
     const cache = await loadCache(app, outputPath);
     let cacheModified = false;
-    for (const bookData of booksWithHighlights) {
+    const totalBooks = booksWithHighlights.length;
+    for (let i = 0; i < booksWithHighlights.length; i++) {
+      const bookData = booksWithHighlights[i];
+      progressNotice.setMessage(`MoonSync: ${bookData.book.title} (${i + 1}/${totalBooks})`);
       try {
         const processed = await processBook(app, outputPath, bookData, settings, result, cache);
         if (processed) {
@@ -1897,16 +1902,21 @@ async function syncFromMoonReader(app, settings, wasmPath) {
     }
     const scannedBooks = await scanAllBookNotes(app, outputPath);
     const customBooks = scannedBooks.filter((book) => !book.isMoonReader);
-    for (const customBook of customBooks) {
-      try {
-        const processed = await processCustomBook(app, outputPath, customBook, settings, result, cache);
-        if (processed) {
-          cacheModified = true;
+    if (customBooks.length > 0) {
+      const totalCustom = customBooks.length;
+      for (let i = 0; i < customBooks.length; i++) {
+        const customBook = customBooks[i];
+        progressNotice.setMessage(`MoonSync: ${customBook.title} (${i + 1}/${totalCustom} custom)`);
+        try {
+          const processed = await processCustomBook(app, outputPath, customBook, settings, result, cache);
+          if (processed) {
+            cacheModified = true;
+          }
+        } catch (error) {
+          result.errors.push(
+            `Error processing custom book "${customBook.title}": ${error}`
+          );
         }
-      } catch (error) {
-        result.errors.push(
-          `Error processing custom book "${customBook.title}": ${error}`
-        );
       }
     }
     if (cacheModified) {
@@ -1915,9 +1925,8 @@ async function syncFromMoonReader(app, settings, wasmPath) {
     if (settings.showIndex) {
       const indexPath = (0, import_obsidian6.normalizePath)(`${outputPath}/${settings.indexNoteTitle}.md`);
       const indexExists = await app.vault.adapter.exists(indexPath);
-      const scannedBooks2 = await scanAllBookNotes(app, outputPath);
       const indexFilename = `${settings.indexNoteTitle}.md`;
-      const filteredScanned = scannedBooks2.filter((b) => !b.filePath.endsWith(indexFilename));
+      const filteredScanned = scannedBooks.filter((b) => !b.filePath.endsWith(indexFilename));
       const totalBookNotes = filteredScanned.length;
       const manualBookCount = totalBookNotes - booksWithHighlights.length;
       const hasManualBooks = manualBookCount > 0;
@@ -1988,7 +1997,7 @@ function mergeManualNoteWithMoonReader(existingContent, bookData, settings) {
     const frontmatter = frontmatterMatch[1];
     const frontmatterLines = frontmatter.split("\n");
     for (const line of frontmatterLines) {
-      if (line.startsWith("progress:") || line.startsWith("current_chapter:") || line.startsWith("highlights_count:") || line.startsWith("highlights_hash:") || line.startsWith("notes_count:") || line.startsWith("last_synced:") || line.startsWith("manual_note:") || line.startsWith("published_date:") || line.startsWith("publisher:") || line.startsWith("page_count:") || line.startsWith("genres:") || line.startsWith("series:") || line.startsWith("language:") || line.startsWith("rating:") || line.startsWith("ratings_count:") || line.trim().startsWith("-")) {
+      if (line.startsWith("progress:") || line.startsWith("current_chapter:") || line.startsWith("highlights_count:") || line.startsWith("highlights_hash:") || line.startsWith("notes_count:") || line.startsWith("last_synced:") || line.startsWith("manual_note:") || line.startsWith("published_date:") || line.startsWith("publisher:") || line.startsWith("page_count:") || line.startsWith("genres:") || line.startsWith("series:") || line.startsWith("language:") || line.trim().startsWith("-")) {
         continue;
       }
       lines.push(line);
@@ -2353,7 +2362,7 @@ function updateCustomBookFrontmatter(content, bookInfo, settings) {
       continue;
     }
     skipNextLine = false;
-    if (line.startsWith("published_date:") || line.startsWith("publisher:") || line.startsWith("page_count:") || line.startsWith("genres:") || line.startsWith("series:") || line.startsWith("language:") || line.startsWith("rating:") || line.startsWith("ratings_count:") || line.startsWith("cover:")) {
+    if (line.startsWith("published_date:") || line.startsWith("publisher:") || line.startsWith("page_count:") || line.startsWith("genres:") || line.startsWith("series:") || line.startsWith("language:") || line.startsWith("cover:")) {
       if (line.startsWith("genres:")) {
         skipNextLine = true;
       }
@@ -2863,12 +2872,16 @@ var MoonSyncPlugin = class extends import_obsidian7.Plugin {
       }
       const bookData = {
         book: {
+          id: 0,
           title: exportData.title,
           author: exportData.author,
           filename: "",
           description: "",
           category: "",
-          iid: ""
+          thumbFile: "",
+          coverFile: "",
+          addTime: "",
+          favorite: ""
         },
         highlights: exportData.highlights,
         statistics: null,

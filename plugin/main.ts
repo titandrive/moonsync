@@ -409,12 +409,16 @@ export default class MoonSyncPlugin extends Plugin {
 			// Create BookData structure
 			const bookData: BookData = {
 				book: {
+					id: 0,
 					title: exportData.title,
 					author: exportData.author,
 					filename: "",
 					description: "",
 					category: "",
-					iid: "",
+					thumbFile: "",
+					coverFile: "",
+					addTime: "",
+					favorite: "",
 				},
 				highlights: exportData.highlights,
 				statistics: null,

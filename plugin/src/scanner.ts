@@ -157,8 +157,14 @@ export function scannedBookToBookData(scanned: ScannedBook): BookData {
 		lastReadTimestamp: scanned.lastReadTimestamp,
 		coverPath: scanned.coverPath,
 		fetchedDescription: null,
-		rating: null,
-		ratingsCount: null,
+		publishedDate: null,
+		publisher: null,
+		pageCount: null,
+		genres: null,
+		series: null,
+		isbn10: null,
+		isbn13: null,
+		language: null,
 	};
 }
 

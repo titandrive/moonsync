@@ -79,10 +79,18 @@ export async function parseDatabase(
 				highlights: highlights.sort((a, b) => a.position - b.position),
 				statistics,
 				progress,
+				currentChapter: null,
+				lastReadTimestamp: null,
 				coverPath: null,
 				fetchedDescription: null,
-				rating: null,
-				ratingsCount: null,
+				publishedDate: null,
+				publisher: null,
+				pageCount: null,
+				genres: null,
+				series: null,
+				isbn10: null,
+				isbn13: null,
+				language: null,
 			});
 		}
 
