@@ -231,26 +231,38 @@ export class MoonSyncSettingTab extends PluginSettingTab {
 
 		new Setting(container)
 			.setName("Generate Library Index")
-			.setDesc("Create an index note with summary stats and links to all books")
+			.setDesc("Create an index note with summary stats and links to all books. Turning this off will delete the existing index note.")
 			.addToggle((toggle) =>
 				toggle
 					.setValue(this.plugin.settings.showIndex)
 					.onChange(async (value) => {
 						this.plugin.settings.showIndex = value;
 						await this.plugin.saveSettings();
+						if (value) {
+							await this.plugin.refreshIndex();
+						} else {
+							await this.plugin.deleteIndex();
+						}
 					})
 			);
 
 		new Setting(container)
 			.setName("Index Note Title")
-			.setDesc("Name of the library index note")
+			.setDesc("Name of the library index note. Changing this will rename the existing file.")
 			.addText((text) =>
 				text
 					.setPlaceholder("1. Library Index")
 					.setValue(this.plugin.settings.indexNoteTitle)
 					.onChange(async (value) => {
-						this.plugin.settings.indexNoteTitle = value || "1. Library Index";
-						await this.plugin.saveSettings();
+						const oldName = this.plugin.settings.indexNoteTitle;
+						const newName = value || "1. Library Index";
+						if (oldName !== newName) {
+							if (this.plugin.settings.showIndex) {
+								await this.plugin.renameIndex(oldName, newName);
+							}
+							this.plugin.settings.indexNoteTitle = newName;
+							await this.plugin.saveSettings();
+						}
 					})
 			);
 
@@ -302,7 +314,7 @@ export class MoonSyncSettingTab extends PluginSettingTab {
 
 		new Setting(container)
 			.setName("Generate Base File")
-			.setDesc("Automatically create and update the .base file for the Obsidian Bases plugin")
+			.setDesc("Automatically create and update the .base file for the Obsidian Bases plugin. Turning this off will delete the existing base file.")
 			.addToggle((toggle) =>
 				toggle
 					.setValue(this.plugin.settings.generateBaseFile)
@@ -311,22 +323,28 @@ export class MoonSyncSettingTab extends PluginSettingTab {
 						await this.plugin.saveSettings();
 						if (value) {
 							await this.plugin.refreshBase();
+						} else {
+							await this.plugin.deleteBase();
 						}
 					})
 			);
 
 		new Setting(container)
 			.setName("Base File Name")
-			.setDesc("Name of the .base file (without extension)")
+			.setDesc("Name of the .base file (without extension). Changing this will rename the existing file.")
 			.addText((text) =>
 				text
 					.setPlaceholder("2. Books Database")
 					.setValue(this.plugin.settings.baseFileName)
 					.onChange(async (value) => {
-						this.plugin.settings.baseFileName = value || "2. Books Database";
-						await this.plugin.saveSettings();
-						if (this.plugin.settings.generateBaseFile) {
-							await this.plugin.refreshBase();
+						const oldName = this.plugin.settings.baseFileName;
+						const newName = value || "2. Books Database";
+						if (oldName !== newName) {
+							if (this.plugin.settings.generateBaseFile) {
+								await this.plugin.renameBase(oldName, newName);
+							}
+							this.plugin.settings.baseFileName = newName;
+							await this.plugin.saveSettings();
 						}
 					})
 			);

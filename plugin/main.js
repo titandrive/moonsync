@@ -216,16 +216,28 @@ var MoonSyncSettingTab = class extends import_obsidian.PluginSettingTab {
   displayIndexBaseTab(container) {
     container.createEl("h3", { text: "Library Index" });
     container.createEl("p", { text: "Configure the automatically generated index of all your books.", cls: "moonsync-section-desc" });
-    new import_obsidian.Setting(container).setName("Generate Library Index").setDesc("Create an index note with summary stats and links to all books").addToggle(
+    new import_obsidian.Setting(container).setName("Generate Library Index").setDesc("Create an index note with summary stats and links to all books. Turning this off will delete the existing index note.").addToggle(
       (toggle) => toggle.setValue(this.plugin.settings.showIndex).onChange(async (value) => {
         this.plugin.settings.showIndex = value;
         await this.plugin.saveSettings();
+        if (value) {
+          await this.plugin.refreshIndex();
+        } else {
+          await this.plugin.deleteIndex();
+        }
       })
     );
-    new import_obsidian.Setting(container).setName("Index Note Title").setDesc("Name of the library index note").addText(
+    new import_obsidian.Setting(container).setName("Index Note Title").setDesc("Name of the library index note. Changing this will rename the existing file.").addText(
       (text) => text.setPlaceholder("1. Library Index").setValue(this.plugin.settings.indexNoteTitle).onChange(async (value) => {
-        this.plugin.settings.indexNoteTitle = value || "1. Library Index";
-        await this.plugin.saveSettings();
+        const oldName = this.plugin.settings.indexNoteTitle;
+        const newName = value || "1. Library Index";
+        if (oldName !== newName) {
+          if (this.plugin.settings.showIndex) {
+            await this.plugin.renameIndex(oldName, newName);
+          }
+          this.plugin.settings.indexNoteTitle = newName;
+          await this.plugin.saveSettings();
+        }
       })
     );
     new import_obsidian.Setting(container).setName("Show Cover Collage").setDesc("Display book covers at the top of the library index").addToggle(
@@ -252,21 +264,27 @@ var MoonSyncSettingTab = class extends import_obsidian.PluginSettingTab {
     );
     container.createEl("h3", { text: "Obsidian Bases", attr: { style: "margin-top: 2em;" } });
     container.createEl("p", { text: "Automatically generate a database configuration file for the Obsidian Bases plugin.", cls: "moonsync-section-desc" });
-    new import_obsidian.Setting(container).setName("Generate Base File").setDesc("Automatically create and update the .base file for the Obsidian Bases plugin").addToggle(
+    new import_obsidian.Setting(container).setName("Generate Base File").setDesc("Automatically create and update the .base file for the Obsidian Bases plugin. Turning this off will delete the existing base file.").addToggle(
       (toggle) => toggle.setValue(this.plugin.settings.generateBaseFile).onChange(async (value) => {
         this.plugin.settings.generateBaseFile = value;
         await this.plugin.saveSettings();
         if (value) {
           await this.plugin.refreshBase();
+        } else {
+          await this.plugin.deleteBase();
         }
       })
     );
-    new import_obsidian.Setting(container).setName("Base File Name").setDesc("Name of the .base file (without extension)").addText(
+    new import_obsidian.Setting(container).setName("Base File Name").setDesc("Name of the .base file (without extension). Changing this will rename the existing file.").addText(
       (text) => text.setPlaceholder("2. Books Database").setValue(this.plugin.settings.baseFileName).onChange(async (value) => {
-        this.plugin.settings.baseFileName = value || "2. Books Database";
-        await this.plugin.saveSettings();
-        if (this.plugin.settings.generateBaseFile) {
-          await this.plugin.refreshBase();
+        const oldName = this.plugin.settings.baseFileName;
+        const newName = value || "2. Books Database";
+        if (oldName !== newName) {
+          if (this.plugin.settings.generateBaseFile) {
+            await this.plugin.renameBase(oldName, newName);
+          }
+          this.plugin.settings.baseFileName = newName;
+          await this.plugin.saveSettings();
         }
       })
     );
@@ -2763,6 +2781,46 @@ var MoonSyncPlugin = class extends import_obsidian7.Plugin {
   }
   async refreshBase() {
     await refreshBaseFile(this.app, this.settings);
+  }
+  async deleteIndex() {
+    const outputPath = (0, import_obsidian7.normalizePath)(this.settings.outputFolder);
+    const indexPath = (0, import_obsidian7.normalizePath)(`${outputPath}/${this.settings.indexNoteTitle}.md`);
+    if (await this.app.vault.adapter.exists(indexPath)) {
+      const file = this.app.vault.getAbstractFileByPath(indexPath);
+      if (file) {
+        await this.app.vault.delete(file);
+        new import_obsidian7.Notice("MoonSync: Index note deleted");
+      }
+    }
+  }
+  async deleteBase() {
+    const outputPath = (0, import_obsidian7.normalizePath)(this.settings.outputFolder);
+    const basePath = (0, import_obsidian7.normalizePath)(`${outputPath}/${this.settings.baseFileName}.base`);
+    if (await this.app.vault.adapter.exists(basePath)) {
+      const file = this.app.vault.getAbstractFileByPath(basePath);
+      if (file) {
+        await this.app.vault.delete(file);
+        new import_obsidian7.Notice("MoonSync: Base file deleted");
+      }
+    }
+  }
+  async renameIndex(oldName, newName) {
+    const outputPath = (0, import_obsidian7.normalizePath)(this.settings.outputFolder);
+    const oldPath = (0, import_obsidian7.normalizePath)(`${outputPath}/${oldName}.md`);
+    const newPath = (0, import_obsidian7.normalizePath)(`${outputPath}/${newName}.md`);
+    const file = this.app.vault.getAbstractFileByPath(oldPath);
+    if (file) {
+      await this.app.fileManager.renameFile(file, newPath);
+    }
+  }
+  async renameBase(oldName, newName) {
+    const outputPath = (0, import_obsidian7.normalizePath)(this.settings.outputFolder);
+    const oldPath = (0, import_obsidian7.normalizePath)(`${outputPath}/${oldName}.base`);
+    const newPath = (0, import_obsidian7.normalizePath)(`${outputPath}/${newName}.base`);
+    const file = this.app.vault.getAbstractFileByPath(oldPath);
+    if (file) {
+      await this.app.fileManager.renameFile(file, newPath);
+    }
   }
   /**
    * Import a Moon Reader manual export note

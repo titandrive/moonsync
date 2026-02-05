@@ -279,6 +279,52 @@ export default class MoonSyncPlugin extends Plugin {
 		await refreshBaseFile(this.app, this.settings);
 	}
 
+	async deleteIndex(): Promise<void> {
+		const outputPath = normalizePath(this.settings.outputFolder);
+		const indexPath = normalizePath(`${outputPath}/${this.settings.indexNoteTitle}.md`);
+		if (await this.app.vault.adapter.exists(indexPath)) {
+			const file = this.app.vault.getAbstractFileByPath(indexPath);
+			if (file) {
+				await this.app.vault.delete(file);
+				new Notice("MoonSync: Index note deleted");
+			}
+		}
+	}
+
+	async deleteBase(): Promise<void> {
+		const outputPath = normalizePath(this.settings.outputFolder);
+		const basePath = normalizePath(`${outputPath}/${this.settings.baseFileName}.base`);
+		if (await this.app.vault.adapter.exists(basePath)) {
+			const file = this.app.vault.getAbstractFileByPath(basePath);
+			if (file) {
+				await this.app.vault.delete(file);
+				new Notice("MoonSync: Base file deleted");
+			}
+		}
+	}
+
+	async renameIndex(oldName: string, newName: string): Promise<void> {
+		const outputPath = normalizePath(this.settings.outputFolder);
+		const oldPath = normalizePath(`${outputPath}/${oldName}.md`);
+		const newPath = normalizePath(`${outputPath}/${newName}.md`);
+
+		const file = this.app.vault.getAbstractFileByPath(oldPath);
+		if (file) {
+			await this.app.fileManager.renameFile(file, newPath);
+		}
+	}
+
+	async renameBase(oldName: string, newName: string): Promise<void> {
+		const outputPath = normalizePath(this.settings.outputFolder);
+		const oldPath = normalizePath(`${outputPath}/${oldName}.base`);
+		const newPath = normalizePath(`${outputPath}/${newName}.base`);
+
+		const file = this.app.vault.getAbstractFileByPath(oldPath);
+		if (file) {
+			await this.app.fileManager.renameFile(file, newPath);
+		}
+	}
+
 	/**
 	 * Import a Moon Reader manual export note
 	 */
