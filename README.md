@@ -90,6 +90,8 @@ If in the future, you begin reading that same book in Moon Reader, and make more
 
 MoonSync provides several commands accessible via the command palette (`Cmd/Ctrl + P`):
 
+<img src="CommandPalette.png" alt="Command Palette" width="300">
+
 ### Sync Now
 Synchronize all books from Moon Reader. Only updates notes when highlights or progress have changed.
 
