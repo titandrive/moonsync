@@ -113,7 +113,7 @@ export default class MoonSyncPlugin extends Plugin {
 		rules.push(`.callout[data-callout="moonsync-description"] { --callout-color: var(--callout-quote); }`);
 
 		if (!this.settings.showCovers) {
-			rules.push(`.internal-embed[src*="covers/"] { display: none !important; }`);
+			rules.push(`.internal-embed[src*="moonsync-covers/"] { display: none !important; }`);
 		}
 
 		if (!this.settings.showReadingProgress) {
@@ -217,7 +217,7 @@ export default class MoonSyncPlugin extends Plugin {
 			let coverPath: string | null = null;
 			if (bookInfo.coverUrl) {
 				try {
-					const coversFolder = normalizePath(`${outputPath}/covers`);
+					const coversFolder = normalizePath(`${outputPath}/moonsync-covers`);
 					if (!(await this.app.vault.adapter.exists(coversFolder))) {
 						await this.app.vault.createFolder(coversFolder);
 					}
@@ -227,7 +227,7 @@ export default class MoonSyncPlugin extends Plugin {
 					const imageData = await downloadAndResizeCover(bookInfo.coverUrl);
 					if (imageData) {
 						await this.app.vault.adapter.writeBinary(coverFilePath, imageData);
-						coverPath = `covers/${coverFilename}`;
+						coverPath = `moonsync-covers/${coverFilename}`;
 					}
 				} catch (error) {
 					console.log(`MoonSync: Failed to download cover for "${title}"`, error);
@@ -334,7 +334,7 @@ export default class MoonSyncPlugin extends Plugin {
 
 				// Save cover if available
 				if (bookInfo.coverUrl) {
-					const coversFolder = normalizePath(`${outputPath}/covers`);
+					const coversFolder = normalizePath(`${outputPath}/moonsync-covers`);
 					if (!(await this.app.vault.adapter.exists(coversFolder))) {
 						await this.app.vault.createFolder(coversFolder);
 					}
@@ -344,7 +344,7 @@ export default class MoonSyncPlugin extends Plugin {
 					const imageData = await downloadCover(bookInfo.coverUrl);
 					if (imageData) {
 						await this.app.vault.adapter.writeBinary(coverFilePath, imageData);
-						coverPath = `covers/${coverFilename}`;
+						coverPath = `moonsync-covers/${coverFilename}`;
 					}
 				}
 
@@ -463,7 +463,7 @@ export default class MoonSyncPlugin extends Plugin {
 					try {
 						// Download and save cover
 						const outputPath = normalizePath(this.settings.outputFolder);
-						const coversFolder = normalizePath(`${outputPath}/covers`);
+						const coversFolder = normalizePath(`${outputPath}/moonsync-covers`);
 
 						// Ensure covers folder exists
 						if (!(await this.app.vault.adapter.exists(coversFolder))) {
@@ -491,11 +491,11 @@ export default class MoonSyncPlugin extends Plugin {
 						await this.app.vault.createBinary(coverFilePath, imageData);
 
 						// Update frontmatter and note body with new cover path
-						const coverPath = `covers/${coverFilename}`;
+						const coverPath = `moonsync-covers/${coverFilename}`;
 						const updatedContent = this.updateNoteCover(content, coverPath);
 
 						// Temporarily remove cover embed to force cache invalidation
-						const contentWithoutEmbed = updatedContent.replace(/!\[\[covers\/[^\]]+\]\]\n?/, "");
+						const contentWithoutEmbed = updatedContent.replace(/!\[\[moonsync-covers\/[^\]]+\]\]\n?/, "");
 						await this.app.vault.modify(activeFile, contentWithoutEmbed);
 
 						// Small delay then re-add the embed
@@ -555,7 +555,7 @@ export default class MoonSyncPlugin extends Plugin {
 
 		// Update or add cover embed in note body
 		const coverEmbed = `![[${coverPath}|200]]`;
-		const coverEmbedPattern = /!\[\[covers\/[^\]]+\|\d+\]\]/;
+		const coverEmbedPattern = /!\[\[moonsync-covers\/[^\]]+\|\d+\]\]/;
 
 		if (coverEmbedPattern.test(contentAfterFrontmatter)) {
 			// Replace existing cover embed
@@ -627,7 +627,7 @@ export default class MoonSyncPlugin extends Plugin {
 					try {
 						// Get the directory of the current file
 						const fileDir = activeFile.parent?.path || "";
-						const coversFolder = normalizePath(`${fileDir}/covers`);
+						const coversFolder = normalizePath(`${fileDir}/moonsync-covers`);
 						let coverPath: string | null = null;
 
 						// Determine new filename based on new title (or keep original if no new title)
@@ -652,7 +652,7 @@ export default class MoonSyncPlugin extends Plugin {
 									await this.app.vault.delete(existingCover);
 								}
 								await this.app.vault.createBinary(coverFilePath, imageData);
-								coverPath = `covers/${coverFilename}`;
+								coverPath = `moonsync-covers/${coverFilename}`;
 							}
 						}
 
@@ -660,7 +660,7 @@ export default class MoonSyncPlugin extends Plugin {
 						const updatedContent = this.updateNoteMetadata(content, bookInfo, coverPath);
 
 						// Temporarily remove cover embed to force cache invalidation
-						const contentWithoutEmbed = updatedContent.replace(/!\[\[covers\/[^\]]+\]\]\n?/, "");
+						const contentWithoutEmbed = updatedContent.replace(/!\[\[moonsync-covers\/[^\]]+\]\]\n?/, "");
 						await this.app.vault.modify(activeFile, contentWithoutEmbed);
 
 						// Small delay then re-add the embed
@@ -805,7 +805,7 @@ export default class MoonSyncPlugin extends Plugin {
 		// Update cover embed
 		if (coverPath) {
 			const coverEmbed = `![[${coverPath}|200]]`;
-			const coverEmbedPattern = /!\[\[covers\/[^\]]+\|\d+\]\]/;
+			const coverEmbedPattern = /!\[\[moonsync-covers\/[^\]]+\|\d+\]\]/;
 
 			if (coverEmbedPattern.test(contentAfterFrontmatter)) {
 				contentAfterFrontmatter = contentAfterFrontmatter.replace(coverEmbedPattern, coverEmbed);

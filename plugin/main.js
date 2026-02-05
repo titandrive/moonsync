@@ -1877,13 +1877,13 @@ async function syncFromMoonReader(app, settings, wasmPath) {
         result.manualBooksAdded = manualBookCount;
       }
       if (result.booksCreated > 0 || result.booksUpdated > 0 || !indexExists || hasManualBooks) {
-        const coversFolder = (0, import_obsidian6.normalizePath)(`${outputPath}/covers`);
+        const coversFolder = (0, import_obsidian6.normalizePath)(`${outputPath}/moonsync-covers`);
         for (const bookData of booksWithHighlights) {
           if (!bookData.coverPath) {
             const coverFilename = `${generateFilename(bookData.book.title)}.jpg`;
             const coverPath = (0, import_obsidian6.normalizePath)(`${coversFolder}/${coverFilename}`);
             if (await app.vault.adapter.exists(coverPath)) {
-              bookData.coverPath = `covers/${coverFilename}`;
+              bookData.coverPath = `moonsync-covers/${coverFilename}`;
             }
           }
         }
@@ -2185,7 +2185,7 @@ async function processBook(app, outputPath, bookData, settings, result, cache) {
   const shouldFetchMetadata = true;
   if (shouldFetchMetadata) {
     const coverFilename = `${filename}.jpg`;
-    const coversFolder = (0, import_obsidian6.normalizePath)(`${outputPath}/covers`);
+    const coversFolder = (0, import_obsidian6.normalizePath)(`${outputPath}/moonsync-covers`);
     const coverPath = (0, import_obsidian6.normalizePath)(`${coversFolder}/${coverFilename}`);
     const coverExists = await app.vault.adapter.exists(coverPath);
     if (cachedInfo) {
@@ -2228,7 +2228,7 @@ async function processBook(app, outputPath, bookData, settings, result, cache) {
           const imageData = await downloadCover(bookInfo.coverUrl);
           if (imageData) {
             await app.vault.adapter.writeBinary(coverPath, imageData);
-            bookData.coverPath = `covers/${coverFilename}`;
+            bookData.coverPath = `moonsync-covers/${coverFilename}`;
           }
         }
         if (bookInfo.description) {
@@ -2272,7 +2272,7 @@ async function processBook(app, outputPath, bookData, settings, result, cache) {
       }
     }
     if (coverExists) {
-      bookData.coverPath = `covers/${coverFilename}`;
+      bookData.coverPath = `moonsync-covers/${coverFilename}`;
     }
   }
   let markdown;
@@ -2327,7 +2327,7 @@ async function processCustomBook(app, outputPath, scannedBook, settings, result,
     result.booksUpdated++;
     if (bookInfo.coverUrl) {
       const coverFilename = `${generateFilename(scannedBook.title)}.jpg`;
-      const coversFolder = (0, import_obsidian6.normalizePath)(`${outputPath}/covers`);
+      const coversFolder = (0, import_obsidian6.normalizePath)(`${outputPath}/moonsync-covers`);
       const coverPath = (0, import_obsidian6.normalizePath)(`${coversFolder}/${coverFilename}`);
       if (!await app.vault.adapter.exists(coverPath)) {
         if (!await app.vault.adapter.exists(coversFolder)) {
@@ -2390,7 +2390,7 @@ function updateCustomBookFrontmatter(content, bookInfo, settings) {
   }
   const coverFilename = generateFilename(((_b = (_a = frontmatterLines.find((l) => l.startsWith("title:"))) == null ? void 0 : _a.split(":")[1]) == null ? void 0 : _b.trim().replace(/"/g, "")) || "");
   if (coverFilename) {
-    lines.push(`cover: "covers/${coverFilename}.jpg"`);
+    lines.push(`cover: "moonsync-covers/${coverFilename}.jpg"`);
   }
   lines.push("---");
   return lines.join("\n") + contentAfterFrontmatter;
@@ -2432,13 +2432,13 @@ async function refreshIndexNote(app, settings) {
       }
     }
     const cache = await loadCache(app, outputPath);
-    const coversFolder = (0, import_obsidian6.normalizePath)(`${outputPath}/covers`);
+    const coversFolder = (0, import_obsidian6.normalizePath)(`${outputPath}/moonsync-covers`);
     for (const bookData of moonReaderBooks) {
       if (!bookData.coverPath) {
         const coverFilename = `${generateFilename(bookData.book.title)}.jpg`;
         const coverPath = (0, import_obsidian6.normalizePath)(`${coversFolder}/${coverFilename}`);
         if (await app.vault.adapter.exists(coverPath)) {
-          bookData.coverPath = `covers/${coverFilename}`;
+          bookData.coverPath = `moonsync-covers/${coverFilename}`;
         }
       }
     }
@@ -2632,7 +2632,7 @@ var MoonSyncPlugin = class extends import_obsidian7.Plugin {
     rules.push(`.callout[data-callout="moonsync-reading-progress"] { --callout-color: var(--callout-success); }`);
     rules.push(`.callout[data-callout="moonsync-description"] { --callout-color: var(--callout-quote); }`);
     if (!this.settings.showCovers) {
-      rules.push(`.internal-embed[src*="covers/"] { display: none !important; }`);
+      rules.push(`.internal-embed[src*="moonsync-covers/"] { display: none !important; }`);
     }
     if (!this.settings.showReadingProgress) {
       rules.push(`.callout[data-callout="moonsync-reading-progress"] { display: none !important; }`);
@@ -2715,7 +2715,7 @@ var MoonSyncPlugin = class extends import_obsidian7.Plugin {
       let coverPath = null;
       if (bookInfo.coverUrl) {
         try {
-          const coversFolder = (0, import_obsidian7.normalizePath)(`${outputPath}/covers`);
+          const coversFolder = (0, import_obsidian7.normalizePath)(`${outputPath}/moonsync-covers`);
           if (!await this.app.vault.adapter.exists(coversFolder)) {
             await this.app.vault.createFolder(coversFolder);
           }
@@ -2724,7 +2724,7 @@ var MoonSyncPlugin = class extends import_obsidian7.Plugin {
           const imageData = await downloadAndResizeCover(bookInfo.coverUrl);
           if (imageData) {
             await this.app.vault.adapter.writeBinary(coverFilePath, imageData);
-            coverPath = `covers/${coverFilename}`;
+            coverPath = `moonsync-covers/${coverFilename}`;
           }
         } catch (error) {
           console.log(`MoonSync: Failed to download cover for "${title}"`, error);
@@ -2804,7 +2804,7 @@ var MoonSyncPlugin = class extends import_obsidian7.Plugin {
       try {
         const bookInfo = await fetchBookInfo(exportData.title, exportData.author);
         if (bookInfo.coverUrl) {
-          const coversFolder = (0, import_obsidian7.normalizePath)(`${outputPath}/covers`);
+          const coversFolder = (0, import_obsidian7.normalizePath)(`${outputPath}/moonsync-covers`);
           if (!await this.app.vault.adapter.exists(coversFolder)) {
             await this.app.vault.createFolder(coversFolder);
           }
@@ -2813,7 +2813,7 @@ var MoonSyncPlugin = class extends import_obsidian7.Plugin {
           const imageData = await downloadCover(bookInfo.coverUrl);
           if (imageData) {
             await this.app.vault.adapter.writeBinary(coverFilePath, imageData);
-            coverPath = `covers/${coverFilename}`;
+            coverPath = `moonsync-covers/${coverFilename}`;
           }
         }
         description = bookInfo.description;
@@ -2904,7 +2904,7 @@ var MoonSyncPlugin = class extends import_obsidian7.Plugin {
           const progressNotice = new import_obsidian7.Notice("MoonSync: Downloading cover...", 0);
           try {
             const outputPath = (0, import_obsidian7.normalizePath)(this.settings.outputFolder);
-            const coversFolder = (0, import_obsidian7.normalizePath)(`${outputPath}/covers`);
+            const coversFolder = (0, import_obsidian7.normalizePath)(`${outputPath}/moonsync-covers`);
             if (!await this.app.vault.adapter.exists(coversFolder)) {
               await this.app.vault.createFolder(coversFolder);
             }
@@ -2922,9 +2922,9 @@ var MoonSyncPlugin = class extends import_obsidian7.Plugin {
               await this.app.vault.delete(existingFile);
             }
             await this.app.vault.createBinary(coverFilePath, imageData);
-            const coverPath = `covers/${coverFilename}`;
+            const coverPath = `moonsync-covers/${coverFilename}`;
             const updatedContent = this.updateNoteCover(content, coverPath);
-            const contentWithoutEmbed = updatedContent.replace(/!\[\[covers\/[^\]]+\]\]\n?/, "");
+            const contentWithoutEmbed = updatedContent.replace(/!\[\[moonsync-covers\/[^\]]+\]\]\n?/, "");
             await this.app.vault.modify(activeFile, contentWithoutEmbed);
             await new Promise((resolve) => setTimeout(resolve, 50));
             await this.app.vault.modify(activeFile, updatedContent);
@@ -2969,7 +2969,7 @@ var MoonSyncPlugin = class extends import_obsidian7.Plugin {
     }
     lines.push("---");
     const coverEmbed = `![[${coverPath}|200]]`;
-    const coverEmbedPattern = /!\[\[covers\/[^\]]+\|\d+\]\]/;
+    const coverEmbedPattern = /!\[\[moonsync-covers\/[^\]]+\|\d+\]\]/;
     if (coverEmbedPattern.test(contentAfterFrontmatter)) {
       contentAfterFrontmatter = contentAfterFrontmatter.replace(coverEmbedPattern, coverEmbed);
     } else {
@@ -3027,7 +3027,7 @@ ${coverEmbed}
           const progressNotice = new import_obsidian7.Notice("MoonSync: Updating metadata...", 0);
           try {
             const fileDir = ((_a = activeFile.parent) == null ? void 0 : _a.path) || "";
-            const coversFolder = (0, import_obsidian7.normalizePath)(`${fileDir}/covers`);
+            const coversFolder = (0, import_obsidian7.normalizePath)(`${fileDir}/moonsync-covers`);
             let coverPath = null;
             const newTitle = bookInfo.title || title;
             const newFilename = generateFilename(newTitle);
@@ -3045,11 +3045,11 @@ ${coverEmbed}
                   await this.app.vault.delete(existingCover);
                 }
                 await this.app.vault.createBinary(coverFilePath, imageData);
-                coverPath = `covers/${coverFilename}`;
+                coverPath = `moonsync-covers/${coverFilename}`;
               }
             }
             const updatedContent = this.updateNoteMetadata(content, bookInfo, coverPath);
-            const contentWithoutEmbed = updatedContent.replace(/!\[\[covers\/[^\]]+\]\]\n?/, "");
+            const contentWithoutEmbed = updatedContent.replace(/!\[\[moonsync-covers\/[^\]]+\]\]\n?/, "");
             await this.app.vault.modify(activeFile, contentWithoutEmbed);
             await new Promise((resolve) => setTimeout(resolve, 50));
             await this.app.vault.modify(activeFile, updatedContent);
@@ -3160,7 +3160,7 @@ ${coverEmbed}
     }
     if (coverPath) {
       const coverEmbed = `![[${coverPath}|200]]`;
-      const coverEmbedPattern = /!\[\[covers\/[^\]]+\|\d+\]\]/;
+      const coverEmbedPattern = /!\[\[moonsync-covers\/[^\]]+\|\d+\]\]/;
       if (coverEmbedPattern.test(contentAfterFrontmatter)) {
         contentAfterFrontmatter = contentAfterFrontmatter.replace(coverEmbedPattern, coverEmbed);
       } else {

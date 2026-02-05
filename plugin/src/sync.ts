@@ -140,13 +140,13 @@ export async function syncFromMoonReader(
 			// Regenerate if: books changed, index doesn't exist, or manual books detected
 			if (result.booksCreated > 0 || result.booksUpdated > 0 || !indexExists || hasManualBooks) {
 				// Populate cover paths for all books (for the collage)
-				const coversFolder = normalizePath(`${outputPath}/covers`);
+				const coversFolder = normalizePath(`${outputPath}/moonsync-covers`);
 				for (const bookData of booksWithHighlights) {
 					if (!bookData.coverPath) {
 						const coverFilename = `${generateFilename(bookData.book.title)}.jpg`;
 						const coverPath = normalizePath(`${coversFolder}/${coverFilename}`);
 						if (await app.vault.adapter.exists(coverPath)) {
-							bookData.coverPath = `covers/${coverFilename}`;
+							bookData.coverPath = `moonsync-covers/${coverFilename}`;
 						}
 					}
 				}
@@ -642,7 +642,7 @@ async function processBook(
 	const shouldFetchMetadata = true; // Always fetch to keep cache complete
 	if (shouldFetchMetadata) {
 		const coverFilename = `${filename}.jpg`;
-		const coversFolder = normalizePath(`${outputPath}/covers`);
+		const coversFolder = normalizePath(`${outputPath}/moonsync-covers`);
 		const coverPath = normalizePath(`${coversFolder}/${coverFilename}`);
 
 		const coverExists = await app.vault.adapter.exists(coverPath);
@@ -696,7 +696,7 @@ async function processBook(
 					const imageData = await downloadCover(bookInfo.coverUrl);
 					if (imageData) {
 						await app.vault.adapter.writeBinary(coverPath, imageData);
-						bookData.coverPath = `covers/${coverFilename}`;
+						bookData.coverPath = `moonsync-covers/${coverFilename}`;
 					}
 				}
 
@@ -753,7 +753,7 @@ async function processBook(
 
 		// Set cover path if cover already exists
 		if (coverExists) {
-			bookData.coverPath = `covers/${coverFilename}`;
+			bookData.coverPath = `moonsync-covers/${coverFilename}`;
 		}
 	}
 
@@ -861,7 +861,7 @@ async function processCustomBook(
 			// Download cover if available and not already present
 			if (bookInfo.coverUrl) {
 				const coverFilename = `${generateFilename(scannedBook.title)}.jpg`;
-				const coversFolder = normalizePath(`${outputPath}/covers`);
+				const coversFolder = normalizePath(`${outputPath}/moonsync-covers`);
 				const coverPath = normalizePath(`${coversFolder}/${coverFilename}`);
 
 				if (!(await app.vault.adapter.exists(coverPath))) {
@@ -958,7 +958,7 @@ function updateCustomBookFrontmatter(
 	// Add cover path if not already present
 	const coverFilename = generateFilename(frontmatterLines.find(l => l.startsWith("title:"))?.split(":")[1]?.trim().replace(/"/g, "") || "");
 	if (coverFilename) {
-		lines.push(`cover: "covers/${coverFilename}.jpg"`);
+		lines.push(`cover: "moonsync-covers/${coverFilename}.jpg"`);
 	}
 
 	lines.push("---");
@@ -1035,7 +1035,7 @@ export async function refreshIndexNote(app: App, settings: MoonSyncSettings): Pr
 
 		// Don't update Moon Reader book titles from cache - epub metadata is more reliable
 
-		const coversFolder = normalizePath(`${outputPath}/covers`);
+		const coversFolder = normalizePath(`${outputPath}/moonsync-covers`);
 
 		// Populate cover paths for Moon+ Reader books
 		for (const bookData of moonReaderBooks) {
@@ -1043,7 +1043,7 @@ export async function refreshIndexNote(app: App, settings: MoonSyncSettings): Pr
 				const coverFilename = `${generateFilename(bookData.book.title)}.jpg`;
 				const coverPath = normalizePath(`${coversFolder}/${coverFilename}`);
 				if (await app.vault.adapter.exists(coverPath)) {
-					bookData.coverPath = `covers/${coverFilename}`;
+					bookData.coverPath = `moonsync-covers/${coverFilename}`;
 				}
 			}
 		}
