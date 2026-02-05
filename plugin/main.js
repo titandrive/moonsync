@@ -636,9 +636,10 @@ async function downloadAndResizeCover(url, maxWidth = 400, maxHeight = 600) {
 
 // src/modal.ts
 var SyncSummaryModal = class extends import_obsidian3.Modal {
-  constructor(app, result) {
+  constructor(app, result, settings) {
     super(app);
     this.result = result;
+    this.settings = settings;
   }
   onOpen() {
     const { contentEl } = this;
@@ -659,6 +660,15 @@ var SyncSummaryModal = class extends import_obsidian3.Modal {
       this.app.setting.openTabById("moonsync");
     });
     const buttonContainer = contentEl.createDiv({ cls: "moonsync-button-container" });
+    const openIndexButton = buttonContainer.createEl("button", { text: "Open Library" });
+    openIndexButton.addEventListener("click", async () => {
+      this.close();
+      const indexPath = (0, import_obsidian3.normalizePath)(`${this.settings.outputFolder}/${this.settings.indexNoteTitle}.md`);
+      const file = this.app.vault.getAbstractFileByPath(indexPath);
+      if (file) {
+        await this.app.workspace.openLinkText(indexPath, "", false);
+      }
+    });
     const closeButton = buttonContainer.createEl("button", { text: "Done" });
     closeButton.addEventListener("click", () => this.close());
   }
@@ -2460,12 +2470,12 @@ async function refreshBaseFile(app, settings) {
     new import_obsidian6.Notice("MoonSync: Failed to refresh base file");
   }
 }
-function showSyncResults(app, result) {
+function showSyncResults(app, result, settings) {
   if (result.success) {
     if (result.booksProcessed === 0) {
       new import_obsidian6.Notice("MoonSync: No books with highlights to sync");
     } else if (result.isFirstSync) {
-      new SyncSummaryModal(app, result).open();
+      new SyncSummaryModal(app, result, settings).open();
     } else {
       const totalProcessed = result.booksCreated + result.booksUpdated;
       const totalBooks = totalProcessed + result.booksSkipped + result.manualBooksAdded;
@@ -2643,7 +2653,7 @@ var MoonSyncPlugin = class extends import_obsidian7.Plugin {
         this.settings,
         wasmPath
       );
-      showSyncResults(this.app, result);
+      showSyncResults(this.app, result, this.settings);
     } catch (error) {
       console.error("MoonSync sync error:", error);
       new import_obsidian7.Notice(`MoonSync: Sync failed - ${error}`);

@@ -6,10 +6,12 @@ import { fetchBookInfo, downloadCover, fetchMultipleBookCovers, BookInfoResult }
 
 export class SyncSummaryModal extends Modal {
 	private result: SyncResult;
+	private settings: MoonSyncSettings;
 
-	constructor(app: App, result: SyncResult) {
+	constructor(app: App, result: SyncResult, settings: MoonSyncSettings) {
 		super(app);
 		this.result = result;
+		this.settings = settings;
 	}
 
 	onOpen() {
@@ -42,8 +44,21 @@ export class SyncSummaryModal extends Modal {
 			(this.app as any).setting.openTabById("moonsync");
 		});
 
-		// Close button
+		// Button container with two buttons
 		const buttonContainer = contentEl.createDiv({ cls: "moonsync-button-container" });
+
+		// Open Index button
+		const openIndexButton = buttonContainer.createEl("button", { text: "Open Library" });
+		openIndexButton.addEventListener("click", async () => {
+			this.close();
+			const indexPath = normalizePath(`${this.settings.outputFolder}/${this.settings.indexNoteTitle}.md`);
+			const file = this.app.vault.getAbstractFileByPath(indexPath);
+			if (file) {
+				await this.app.workspace.openLinkText(indexPath, "", false);
+			}
+		});
+
+		// Done button
 		const closeButton = buttonContainer.createEl("button", { text: "Done" });
 		closeButton.addEventListener("click", () => this.close());
 	}

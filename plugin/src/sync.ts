@@ -1022,13 +1022,13 @@ export async function refreshBaseFile(app: App, settings: MoonSyncSettings): Pro
 /**
  * Display sync results to the user
  */
-export function showSyncResults(app: App, result: SyncResult): void {
+export function showSyncResults(app: App, result: SyncResult, settings: MoonSyncSettings): void {
 	if (result.success) {
 		if (result.booksProcessed === 0) {
 			new Notice("MoonSync: No books with highlights to sync");
 		} else if (result.isFirstSync) {
 			// Show summary modal on first sync
-			new SyncSummaryModal(app, result).open();
+			new SyncSummaryModal(app, result, settings).open();
 		} else {
 			const totalProcessed = result.booksCreated + result.booksUpdated;
 			const totalBooks = totalProcessed + result.booksSkipped + result.manualBooksAdded;

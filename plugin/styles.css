@@ -55,6 +55,10 @@
 	justify-content: flex-end;
 }
 
+.moonsync-summary-modal .moonsync-button-container {
+	justify-content: space-between;
+}
+
 .moonsync-button-container button {
 	padding: 0.5em 2em;
 }
