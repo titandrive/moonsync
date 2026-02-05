@@ -2,7 +2,7 @@
 
 Sync your reading highlights, notes, and progress from Moon+ Reader to Obsidian. MoonSync supports both automatic synchronization using Dropbox or via manual exports. 
 
-<img src="BookScreenshot.png" alt="Book note example" width="420">
+<img src="assets/BookScreenshot.png" alt="Book note example" width="420">
 
 ## How It Works
 Whenever you sync a book to the cloud in Moon Reader, it saves this data to two cache files in Dropbox. These files contain all of your book's metadata including highlights, notes, reading progress and book information. MoonSync reads this data and syncs it to your Obsidian vault. 
@@ -99,7 +99,7 @@ If in the future, you begin reading that same book in Moon Reader, and make more
 
 MoonSync provides several commands accessible via the command palette (`Cmd/Ctrl + P`):
 
-<img src="CommandPalette.png" alt="Command Palette" width="420">
+<img src="assets/CommandPalette.png" alt="Command Palette" width="420">
 
 ### Sync Now
 Synchronize all books from Moon Reader. Only updates notes when highlights or progress have changed.
@@ -170,7 +170,7 @@ When enabled, MoonSync generates an index file titled `1. Library Index.md` that
 
 The index updates automatically after each sync.
 
-<img src="IndexScreenshot.png" alt="Library index example" width="420">
+<img src="assets/IndexScreenshot.png" alt="Library index example" width="420">
 
 #### Base Note
 The base note provides a database-like view of your book data. 
@@ -192,9 +192,9 @@ It also provides a library view that shows a breakdown of the following statisti
 - Published date
 - Language
 
-<img src="BaseScreenshot2.png" alt="Base Library View" width="420">
+<img src="assets/BaseScreenshot2.png" alt="Base Library View" width="420">
 
-<img src="BaseScreenshot.png" alt="Base Gallery View" width="420">
+<img src="assets/BaseScreenshot.png" alt="Base Gallery View" width="420">
 
 ## Privacy & Security
 
