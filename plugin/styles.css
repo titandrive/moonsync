@@ -348,3 +348,35 @@
 .moonsync-failed-error {
 	color: var(--text-muted);
 }
+
+/* Callout colors */
+.callout[data-callout="moonsync-reading-progress"] {
+	--callout-color: var(--callout-success);
+}
+
+.callout[data-callout="moonsync-description"] {
+	--callout-color: var(--callout-quote);
+}
+
+.callout[data-callout="moonsync-user-notes"] {
+	--callout-color: 168, 130, 255;
+}
+
+/* Content visibility toggles (controlled via body classes) */
+body.moonsync-hide-covers .internal-embed[src*="moonsync-covers/"] {
+	display: none !important;
+}
+
+body.moonsync-hide-reading-progress .callout[data-callout="moonsync-reading-progress"] {
+	display: none !important;
+}
+
+body.moonsync-hide-description .callout[data-callout="moonsync-description"] {
+	display: none !important;
+}
+
+body.moonsync-hide-highlight-colors .callout[data-callout="info"],
+body.moonsync-hide-highlight-colors .callout[data-callout="tip"],
+body.moonsync-hide-highlight-colors .callout[data-callout="warning"] {
+	--callout-color: var(--callout-quote);
+}

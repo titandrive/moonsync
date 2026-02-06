@@ -94,7 +94,7 @@ export function generateBookNote(bookData: BookData, settings: MoonSyncSettings)
 
 	// Reading Progress section (always generate if data exists, use callout for CSS toggle)
 	if (progress !== null || currentChapter !== null || lastReadTimestamp !== null) {
-		lines.push("> [!moonsync-reading-progress]+ Reading Progress");
+		lines.push("> [!moonsync-reading-progress]+ Reading progress");
 		if (progress !== null) {
 			lines.push(`> - **Progress:** ${progress.toFixed(1)}%`);
 		}
@@ -102,7 +102,7 @@ export function generateBookNote(bookData: BookData, settings: MoonSyncSettings)
 			lines.push(`> - **Chapter:** ${currentChapter}`);
 		}
 		if (lastReadTimestamp !== null) {
-			lines.push(`> - **Last Read:** ${formatDate(lastReadTimestamp)}`);
+			lines.push(`> - **Last read:** ${formatDate(lastReadTimestamp)}`);
 		}
 		lines.push("");
 	}
@@ -122,7 +122,7 @@ export function generateBookNote(bookData: BookData, settings: MoonSyncSettings)
 
 	// Highlights section
 	if (highlights.length > 0) {
-		lines.push("## Moon Reader Highlights");
+		lines.push("## Moon Reader highlights");
 		lines.push("");
 
 		for (const highlight of highlights) {
@@ -132,9 +132,9 @@ export function generateBookNote(bookData: BookData, settings: MoonSyncSettings)
 	}
 
 	// My Notes section - preserved across syncs
-	lines.push("## My Notes");
+	lines.push("## My notes");
 	lines.push("");
-	lines.push("> [!moonsync-user-notes]+ Your Notes");
+	lines.push("> [!moonsync-user-notes]+ Your notes");
 	lines.push("> Add your thoughts, analysis, and notes here. This section is preserved across syncs.");
 	lines.push("");
 
@@ -272,7 +272,7 @@ export function generateIndexNote(books: BookData[], settings: MoonSyncSettings)
 	lines.push(`- **Highlights:** ${totalHighlights}`);
 	lines.push(`- **Notes:** ${totalNotes}`);
 	if (booksWithProgress.length > 0) {
-		lines.push(`- **Average Progress:** ${avgProgress.toFixed(1)}%`);
+		lines.push(`- **Average progress:** ${avgProgress.toFixed(1)}%`);
 	}
 	lines.push("");
 
@@ -340,9 +340,9 @@ export function generateBaseFile(settings: MoonSyncSettings): string {
 	lines.push("  notes_count:");
 	lines.push("    displayName: Notes");
 	lines.push("  last_synced:");
-	lines.push("    displayName: Last Synced");
+	lines.push("    displayName: Last synced");
 	lines.push("  last_read:");
-	lines.push("    displayName: Last Read");
+	lines.push("    displayName: Last read");
 	lines.push("  publisher:");
 	lines.push("    displayName: Publisher");
 	lines.push("  series:");

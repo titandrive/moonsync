@@ -21,7 +21,7 @@ export class SyncSummaryModal extends Modal {
 
 		// Title - changes if there were failures
 		const hasFailures = this.result.failedBooks && this.result.failedBooks.length > 0;
-		const title = hasFailures ? "MoonSync Import Complete (with errors)" : "MoonSync Import Complete";
+		const title = hasFailures ? "MoonSync import complete (with errors)" : "MoonSync import complete";
 		contentEl.createEl("h2", { text: title });
 
 		// Stats container
@@ -29,8 +29,8 @@ export class SyncSummaryModal extends Modal {
 
 		// Create stat items (2x2 grid)
 		// Top row: Books Imported, Notes Created
-		this.createStatItem(statsContainer, this.result.booksCreated.toString(), "Books Imported");
-		this.createStatItem(statsContainer, this.result.booksCreated.toString(), "Notes Created");
+		this.createStatItem(statsContainer, this.result.booksCreated.toString(), "Books imported");
+		this.createStatItem(statsContainer, this.result.booksCreated.toString(), "Notes created");
 		// Bottom row: Highlights, Notes
 		this.createStatItem(statsContainer, this.result.totalHighlights.toString(), "Highlights");
 		this.createStatItem(statsContainer, this.result.totalNotes.toString(), "Notes");
@@ -49,7 +49,7 @@ export class SyncSummaryModal extends Modal {
 
 		// Settings link
 		const settingsLink = contentEl.createDiv({ cls: "moonsync-settings-link" });
-		const link = settingsLink.createEl("a", { text: "Open MoonSync Settings" });
+		const link = settingsLink.createEl("a", { text: "Open MoonSync settings" });
 		link.addEventListener("click", (e) => {
 			e.preventDefault();
 			this.close();
@@ -62,7 +62,7 @@ export class SyncSummaryModal extends Modal {
 		const buttonContainer = contentEl.createDiv({ cls: "moonsync-button-container" });
 
 		// Open Index button
-		const openIndexButton = buttonContainer.createEl("button", { text: "Open Library" });
+		const openIndexButton = buttonContainer.createEl("button", { text: "Open library" });
 		openIndexButton.addEventListener("click", async () => {
 			this.close();
 			const indexPath = normalizePath(`${this.settings.outputFolder}/${this.settings.indexNoteTitle}.md`);
@@ -118,7 +118,7 @@ export class SelectCoverModal extends Modal {
 		modalEl.addClass("mod-moonsync-cover");
 
 		// Title
-		contentEl.createEl("h2", { text: "Fetch Book Cover" });
+		contentEl.createEl("h2", { text: "Fetch book cover" });
 
 		// Tab navigation
 		const tabNav = contentEl.createDiv({ cls: "moonsync-tab-nav" });
@@ -343,7 +343,7 @@ export class SelectBookMetadataModal extends Modal {
 		modalEl.addClass("mod-moonsync-cover");
 
 		// Title
-		contentEl.createEl("h2", { text: "Fetch Book Metadata" });
+		contentEl.createEl("h2", { text: "Fetch book metadata" });
 		contentEl.createEl("p", {
 			text: "Select a book to replace all metadata including cover, description, and details.",
 			cls: "moonsync-url-description"
@@ -519,7 +519,7 @@ export class CreateBookModal extends Modal {
 		contentEl.addClass("moonsync-select-cover-modal");
 		modalEl.addClass("mod-moonsync-cover");
 
-		contentEl.createEl("h2", { text: "Create Book Note" });
+		contentEl.createEl("h2", { text: "Create book note" });
 		contentEl.createEl("p", {
 			text: "Search for a book and select it to create a note.",
 			cls: "moonsync-url-description"

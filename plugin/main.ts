@@ -12,7 +12,6 @@ import { join } from "path";
 export default class MoonSyncPlugin extends Plugin {
 	settings: MoonSyncSettings = DEFAULT_SETTINGS;
 	ribbonIconEl: HTMLElement | null = null;
-	styleEl: HTMLStyleElement | null = null;
 
 	async onload() {
 		await this.loadSettings();
@@ -29,35 +28,35 @@ export default class MoonSyncPlugin extends Plugin {
 		// Add sync command
 		this.addCommand({
 			id: "sync-now",
-			name: "Sync Now",
+			name: "Sync now",
 			callback: () => this.runSync(),
 		});
 
 		// Add create book note command
 		this.addCommand({
 			id: "create-book-note",
-			name: "Create Book Note",
+			name: "Create book note",
 			callback: () => this.openCreateBookModal(),
 		});
 
 		// Add import note command
 		this.addCommand({
 			id: "import-note",
-			name: "Import Note",
+			name: "Import note",
 			callback: () => this.importManualExport(),
 		});
 
 		// Add fetch cover command
 		this.addCommand({
 			id: "refetch-cover",
-			name: "Fetch Book Cover",
+			name: "Fetch book cover",
 			callback: () => this.refetchBookCover(),
 		});
 
 		// Add fetch metadata command
 		this.addCommand({
 			id: "fetch-metadata",
-			name: "Fetch Book Metadata",
+			name: "Fetch book metadata",
 			callback: () => this.fetchBookMetadata(),
 		});
 
@@ -71,11 +70,13 @@ export default class MoonSyncPlugin extends Plugin {
 	}
 
 	onunload() {
-		// Clean up injected style element
-		if (this.styleEl) {
-			this.styleEl.remove();
-			this.styleEl = null;
-		}
+		// Clean up body classes
+		document.body.classList.remove(
+			"moonsync-hide-covers",
+			"moonsync-hide-reading-progress",
+			"moonsync-hide-description",
+			"moonsync-hide-highlight-colors"
+		);
 	}
 
 	updateRibbonIcon() {
@@ -89,50 +90,17 @@ export default class MoonSyncPlugin extends Plugin {
 		if (this.settings.showRibbonIcon) {
 			this.ribbonIconEl = this.addRibbonIcon(
 				"book-open",
-				"MoonSync: Sync Now",
+				"MoonSync: Sync now",
 				() => this.runSync()
 			);
 		}
 	}
 
 	updateContentVisibility() {
-		// Remove existing style element if present
-		if (this.styleEl) {
-			this.styleEl.remove();
-			this.styleEl = null;
-		}
-
-		// Create new style element
-		this.styleEl = document.createElement("style");
-		this.styleEl.id = "moonsync-content-visibility";
-
-		// Build CSS rules based on settings
-		const rules: string[] = [];
-
-		// Style moonsync callouts
-		rules.push(`.callout[data-callout="moonsync-reading-progress"] { --callout-color: var(--callout-success); }`);
-		rules.push(`.callout[data-callout="moonsync-description"] { --callout-color: var(--callout-quote); }`);
-		rules.push(`.callout[data-callout="moonsync-user-notes"] { --callout-color: 168, 130, 255; }`);
-
-		if (!this.settings.showCovers) {
-			rules.push(`.internal-embed[src*="moonsync-covers/"] { display: none !important; }`);
-		}
-
-		if (!this.settings.showReadingProgress) {
-			rules.push(`.callout[data-callout="moonsync-reading-progress"] { display: none !important; }`);
-		}
-
-		if (!this.settings.showDescription) {
-			rules.push(`.callout[data-callout="moonsync-description"] { display: none !important; }`);
-		}
-
-		// When highlight colors are off, make all highlight callouts look like quotes
-		if (!this.settings.showHighlightColors) {
-			rules.push(`.callout[data-callout="info"], .callout[data-callout="tip"], .callout[data-callout="warning"] { --callout-color: var(--callout-quote); }`);
-		}
-
-		this.styleEl.textContent = rules.join("\n");
-		document.head.appendChild(this.styleEl);
+		document.body.classList.toggle("moonsync-hide-covers", !this.settings.showCovers);
+		document.body.classList.toggle("moonsync-hide-reading-progress", !this.settings.showReadingProgress);
+		document.body.classList.toggle("moonsync-hide-description", !this.settings.showDescription);
+		document.body.classList.toggle("moonsync-hide-highlight-colors", !this.settings.showHighlightColors);
 	}
 
 	async runSync(): Promise<void> {

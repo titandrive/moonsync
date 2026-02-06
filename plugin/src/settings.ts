@@ -31,7 +31,7 @@ export class MoonSyncSettingTab extends PluginSettingTab {
 		const { containerEl } = this;
 		containerEl.empty();
 
-		containerEl.createEl("h2", { text: "MoonSync Settings" });
+		containerEl.createEl("h2", { text: "MoonSync settings" });
 
 		// Create tab navigation
 		const tabNav = containerEl.createDiv({ cls: "moonsync-tab-nav" });
@@ -39,7 +39,7 @@ export class MoonSyncSettingTab extends PluginSettingTab {
 		const tabs = [
 			{ id: "configuration", name: "Configuration" },
 			{ id: "content", name: "Content" },
-			{ id: "index-base", name: "Index & Base" },
+			{ id: "index-base", name: "Index & base" },
 			{ id: "about", name: "About" }
 		];
 
@@ -81,7 +81,7 @@ export class MoonSyncSettingTab extends PluginSettingTab {
 		let validationEl: HTMLElement;
 
 		const pathSetting = new Setting(container)
-			.setName("Moon Reader Dropbox Path")
+			.setName("Moon Reader Dropbox path")
 			.setDesc(
 				"Path to your Books folder in Dropbox (usually Dropbox/Apps/Books). The plugin will find the hidden .Moon+ folder automatically."
 			)
@@ -117,7 +117,7 @@ export class MoonSyncSettingTab extends PluginSettingTab {
 		}
 
 		new Setting(container)
-			.setName("Output Folder")
+			.setName("Output folder")
 			.setDesc("Folder in your vault where book notes will be created")
 			.addText((text) =>
 				text
@@ -133,7 +133,7 @@ export class MoonSyncSettingTab extends PluginSettingTab {
 		container.createEl("p", { text: "Control when and how MoonSync syncs your highlights.", cls: "moonsync-section-desc" });
 
 		new Setting(container)
-			.setName("Sync Now")
+			.setName("Sync now")
 			.setDesc("Manually trigger a sync from Moon Reader")
 			.addButton((button) =>
 				button.setButtonText("Sync").onClick(async () => {
@@ -142,7 +142,7 @@ export class MoonSyncSettingTab extends PluginSettingTab {
 			);
 
 		new Setting(container)
-			.setName("Sync on Startup")
+			.setName("Sync on startup")
 			.setDesc("Automatically sync when Obsidian starts")
 			.addToggle((toggle) =>
 				toggle
@@ -154,7 +154,7 @@ export class MoonSyncSettingTab extends PluginSettingTab {
 			);
 
 		new Setting(container)
-			.setName("Show Ribbon Icon")
+			.setName("Show ribbon icon")
 			.setDesc("Show sync button in ribbon menu")
 			.addToggle((toggle) =>
 				toggle
@@ -167,7 +167,7 @@ export class MoonSyncSettingTab extends PluginSettingTab {
 			);
 
 		new Setting(container)
-			.setName("Track Books Without Highlights")
+			.setName("Track books without highlights")
 			.setDesc("Track books you have started reading but have no existing highlights or notes")
 			.addToggle((toggle) =>
 				toggle
@@ -180,11 +180,11 @@ export class MoonSyncSettingTab extends PluginSettingTab {
 	}
 
 	private displayContentTab(container: HTMLElement): void {
-		container.createEl("h3", { text: "Note Content" });
+		container.createEl("h3", { text: "Note content" });
 		container.createEl("p", { text: "Control what data is included in your book notes.", cls: "moonsync-section-desc" });
 
 		new Setting(container)
-			.setName("Show Description")
+			.setName("Show description")
 			.setDesc("Include book description in generated notes")
 			.addToggle((toggle) =>
 				toggle
@@ -197,7 +197,7 @@ export class MoonSyncSettingTab extends PluginSettingTab {
 			);
 
 		new Setting(container)
-			.setName("Show Reading Progress")
+			.setName("Show reading progress")
 			.setDesc("Include reading progress section. Note: Progress data may not always be accurate depending on Moon Reader sync.")
 			.addToggle((toggle) =>
 				toggle
@@ -210,7 +210,7 @@ export class MoonSyncSettingTab extends PluginSettingTab {
 			);
 
 		new Setting(container)
-			.setName("Show Highlight Colors")
+			.setName("Show highlight colors")
 			.setDesc("Use different callout styles based on highlight color. When off, all highlights appear as quotes.")
 			.addToggle((toggle) =>
 				toggle
@@ -223,7 +223,7 @@ export class MoonSyncSettingTab extends PluginSettingTab {
 			);
 
 		new Setting(container)
-			.setName("Show Book Covers")
+			.setName("Show book covers")
 			.setDesc("Display book covers in notes. Covers are always downloaded to the 'covers' subfolder.")
 			.addToggle((toggle) =>
 				toggle
@@ -237,11 +237,11 @@ export class MoonSyncSettingTab extends PluginSettingTab {
 	}
 
 	private displayIndexBaseTab(container: HTMLElement): void {
-		container.createEl("h3", { text: "Library Index" });
+		container.createEl("h3", { text: "Library index" });
 		container.createEl("p", { text: "Configure the automatically generated index of all your books.", cls: "moonsync-section-desc" });
 
 		new Setting(container)
-			.setName("Generate Library Index")
+			.setName("Generate library index")
 			.setDesc("Create an index note with summary stats and links to all books. Turning this off will delete the existing index note.")
 			.addToggle((toggle) =>
 				toggle
@@ -258,7 +258,7 @@ export class MoonSyncSettingTab extends PluginSettingTab {
 			);
 
 		new Setting(container)
-			.setName("Index Note Title")
+			.setName("Index note title")
 			.setDesc("Name of the library index note. Changing this will rename the existing file.")
 			.addText((text) =>
 				text
@@ -278,7 +278,7 @@ export class MoonSyncSettingTab extends PluginSettingTab {
 			);
 
 		new Setting(container)
-			.setName("Show Cover Collage")
+			.setName("Show cover collage")
 			.setDesc("Display book covers at the top of the library index")
 			.addToggle((toggle) =>
 				toggle
@@ -291,7 +291,7 @@ export class MoonSyncSettingTab extends PluginSettingTab {
 			);
 
 		new Setting(container)
-			.setName("Cover Collage Limit")
+			.setName("Cover collage limit")
 			.setDesc("Maximum number of covers to show (0 = show all)")
 			.addText((text) =>
 				text
@@ -306,12 +306,12 @@ export class MoonSyncSettingTab extends PluginSettingTab {
 			);
 
 		new Setting(container)
-			.setName("Cover Collage Sort")
+			.setName("Cover collage sort")
 			.setDesc("How to sort covers in the collage")
 			.addDropdown((dropdown) =>
 				dropdown
 					.addOption("alpha", "Alphabetical")
-					.addOption("recent", "Most Recent")
+					.addOption("recent", "Most recent")
 					.setValue(this.plugin.settings.coverCollageSort)
 					.onChange(async (value: "alpha" | "recent") => {
 						this.plugin.settings.coverCollageSort = value;
@@ -324,7 +324,7 @@ export class MoonSyncSettingTab extends PluginSettingTab {
 		container.createEl("p", { text: "Automatically generate a database configuration file for the Obsidian Bases plugin.", cls: "moonsync-section-desc" });
 
 		new Setting(container)
-			.setName("Generate Base File")
+			.setName("Generate base file")
 			.setDesc("Automatically create and update the .base file for the Obsidian Bases plugin. Turning this off will delete the existing base file.")
 			.addToggle((toggle) =>
 				toggle
@@ -341,7 +341,7 @@ export class MoonSyncSettingTab extends PluginSettingTab {
 			);
 
 		new Setting(container)
-			.setName("Base File Name")
+			.setName("Base file name")
 			.setDesc("Name of the .base file (without extension). Changing this will rename the existing file.")
 			.addText((text) =>
 				text
@@ -362,7 +362,7 @@ export class MoonSyncSettingTab extends PluginSettingTab {
 	}
 
 	private displayAboutTab(container: HTMLElement): void {
-		container.createEl("h3", { text: "About MoonSync" });
+		container.createEl("h3", { text: "About" });
 
 		new Setting(container)
 			.setName("Sync your Moon Reader highlights to Obsidian")

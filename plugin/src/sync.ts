@@ -370,12 +370,12 @@ function mergeManualNoteWithMoonReader(
 	lines.push("");
 
 	// Add Moon Reader highlights section
-	lines.push("## Moon Reader Highlights");
+	lines.push("## Moon Reader highlights");
 	lines.push("");
 
 	// Add progress info if enabled
 	if (settings.showReadingProgress && (bookData.progress !== null || bookData.currentChapter !== null)) {
-		lines.push("**Reading Progress:**");
+		lines.push("**Reading progress:**");
 		if (bookData.progress !== null) {
 			lines.push(`- Progress: ${bookData.progress.toFixed(1)}%`);
 		}
@@ -404,7 +404,7 @@ function mergeExistingNoteWithHighlights(
 	settings: MoonSyncSettings
 ): string {
 	// Extract user's "My Notes" section content if it exists
-	const myNotesPattern = /\n## My Notes\n([\s\S]*?)(?=\n## |\n---|\s*$)/;
+	const myNotesPattern = /\n## My [Nn]otes\n([\s\S]*?)(?=\n## |\n---|\s*$)/;
 	const myNotesMatch = existingContent.match(myNotesPattern);
 
 	// Get the content inside My Notes (after the placeholder callout if present)
@@ -412,7 +412,7 @@ function mergeExistingNoteWithHighlights(
 	if (myNotesMatch) {
 		let notesSection = myNotesMatch[1];
 		// Remove the default placeholder callout if it's still there unchanged
-		const placeholderPattern = /^> \[!moonsync-user-notes\]\+ Your Notes\n> Add your thoughts, analysis, and notes here\. This section is preserved across syncs\.\n?/;
+		const placeholderPattern = /^> \[!moonsync-user-notes\]\+ Your [Nn]otes\n> Add your thoughts, analysis, and notes here\. This section is preserved across syncs\.\n?/;
 		notesSection = notesSection.replace(placeholderPattern, "").trim();
 		if (notesSection) {
 			userNotesContent = notesSection;
@@ -425,7 +425,7 @@ function mergeExistingNoteWithHighlights(
 	// If user had custom notes, replace the placeholder with their content
 	if (userNotesContent) {
 		// Replace the placeholder callout with user's content
-		const placeholderInFresh = "> [!moonsync-user-notes]+ Your Notes\n> Add your thoughts, analysis, and notes here. This section is preserved across syncs.";
+		const placeholderInFresh = "> [!moonsync-user-notes]+ Your notes\n> Add your thoughts, analysis, and notes here. This section is preserved across syncs.";
 		freshNote = freshNote.replace(placeholderInFresh, userNotesContent);
 	}
 

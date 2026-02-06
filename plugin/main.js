@@ -99,12 +99,12 @@ var MoonSyncSettingTab = class extends import_obsidian.PluginSettingTab {
   display() {
     const { containerEl } = this;
     containerEl.empty();
-    containerEl.createEl("h2", { text: "MoonSync Settings" });
+    containerEl.createEl("h2", { text: "MoonSync settings" });
     const tabNav = containerEl.createDiv({ cls: "moonsync-tab-nav" });
     const tabs = [
       { id: "configuration", name: "Configuration" },
       { id: "content", name: "Content" },
-      { id: "index-base", name: "Index & Base" },
+      { id: "index-base", name: "Index & base" },
       { id: "about", name: "About" }
     ];
     tabs.forEach((tab) => {
@@ -131,7 +131,7 @@ var MoonSyncSettingTab = class extends import_obsidian.PluginSettingTab {
     container.createEl("p", { text: "Set up your Moon Reader backup location and note output folder.", cls: "moonsync-section-desc" });
     let textComponent;
     let validationEl;
-    const pathSetting = new import_obsidian.Setting(container).setName("Moon Reader Dropbox Path").setDesc(
+    const pathSetting = new import_obsidian.Setting(container).setName("Moon Reader Dropbox path").setDesc(
       "Path to your Books folder in Dropbox (usually Dropbox/Apps/Books). The plugin will find the hidden .Moon+ folder automatically."
     ).addText((text) => {
       textComponent = text;
@@ -155,7 +155,7 @@ var MoonSyncSettingTab = class extends import_obsidian.PluginSettingTab {
     if (this.plugin.settings.dropboxPath) {
       this.validateDropboxPath(this.plugin.settings.dropboxPath, validationEl);
     }
-    new import_obsidian.Setting(container).setName("Output Folder").setDesc("Folder in your vault where book notes will be created").addText(
+    new import_obsidian.Setting(container).setName("Output folder").setDesc("Folder in your vault where book notes will be created").addText(
       (text) => text.setPlaceholder("Books").setValue(this.plugin.settings.outputFolder).onChange(async (value) => {
         this.plugin.settings.outputFolder = value || "Books";
         await this.plugin.saveSettings();
@@ -163,25 +163,25 @@ var MoonSyncSettingTab = class extends import_obsidian.PluginSettingTab {
     );
     container.createEl("h3", { text: "Sync", attr: { style: "margin-top: 2em;" } });
     container.createEl("p", { text: "Control when and how MoonSync syncs your highlights.", cls: "moonsync-section-desc" });
-    new import_obsidian.Setting(container).setName("Sync Now").setDesc("Manually trigger a sync from Moon Reader").addButton(
+    new import_obsidian.Setting(container).setName("Sync now").setDesc("Manually trigger a sync from Moon Reader").addButton(
       (button) => button.setButtonText("Sync").onClick(async () => {
         await this.plugin.runSync();
       })
     );
-    new import_obsidian.Setting(container).setName("Sync on Startup").setDesc("Automatically sync when Obsidian starts").addToggle(
+    new import_obsidian.Setting(container).setName("Sync on startup").setDesc("Automatically sync when Obsidian starts").addToggle(
       (toggle) => toggle.setValue(this.plugin.settings.syncOnStartup).onChange(async (value) => {
         this.plugin.settings.syncOnStartup = value;
         await this.plugin.saveSettings();
       })
     );
-    new import_obsidian.Setting(container).setName("Show Ribbon Icon").setDesc("Show sync button in ribbon menu").addToggle(
+    new import_obsidian.Setting(container).setName("Show ribbon icon").setDesc("Show sync button in ribbon menu").addToggle(
       (toggle) => toggle.setValue(this.plugin.settings.showRibbonIcon).onChange(async (value) => {
         this.plugin.settings.showRibbonIcon = value;
         await this.plugin.saveSettings();
         this.plugin.updateRibbonIcon();
       })
     );
-    new import_obsidian.Setting(container).setName("Track Books Without Highlights").setDesc("Track books you have started reading but have no existing highlights or notes").addToggle(
+    new import_obsidian.Setting(container).setName("Track books without highlights").setDesc("Track books you have started reading but have no existing highlights or notes").addToggle(
       (toggle) => toggle.setValue(this.plugin.settings.trackBooksWithoutHighlights).onChange(async (value) => {
         this.plugin.settings.trackBooksWithoutHighlights = value;
         await this.plugin.saveSettings();
@@ -189,30 +189,30 @@ var MoonSyncSettingTab = class extends import_obsidian.PluginSettingTab {
     );
   }
   displayContentTab(container) {
-    container.createEl("h3", { text: "Note Content" });
+    container.createEl("h3", { text: "Note content" });
     container.createEl("p", { text: "Control what data is included in your book notes.", cls: "moonsync-section-desc" });
-    new import_obsidian.Setting(container).setName("Show Description").setDesc("Include book description in generated notes").addToggle(
+    new import_obsidian.Setting(container).setName("Show description").setDesc("Include book description in generated notes").addToggle(
       (toggle) => toggle.setValue(this.plugin.settings.showDescription).onChange(async (value) => {
         this.plugin.settings.showDescription = value;
         await this.plugin.saveSettings();
         this.plugin.updateContentVisibility();
       })
     );
-    new import_obsidian.Setting(container).setName("Show Reading Progress").setDesc("Include reading progress section. Note: Progress data may not always be accurate depending on Moon Reader sync.").addToggle(
+    new import_obsidian.Setting(container).setName("Show reading progress").setDesc("Include reading progress section. Note: Progress data may not always be accurate depending on Moon Reader sync.").addToggle(
       (toggle) => toggle.setValue(this.plugin.settings.showReadingProgress).onChange(async (value) => {
         this.plugin.settings.showReadingProgress = value;
         await this.plugin.saveSettings();
         this.plugin.updateContentVisibility();
       })
     );
-    new import_obsidian.Setting(container).setName("Show Highlight Colors").setDesc("Use different callout styles based on highlight color. When off, all highlights appear as quotes.").addToggle(
+    new import_obsidian.Setting(container).setName("Show highlight colors").setDesc("Use different callout styles based on highlight color. When off, all highlights appear as quotes.").addToggle(
       (toggle) => toggle.setValue(this.plugin.settings.showHighlightColors).onChange(async (value) => {
         this.plugin.settings.showHighlightColors = value;
         await this.plugin.saveSettings();
         this.plugin.updateContentVisibility();
       })
     );
-    new import_obsidian.Setting(container).setName("Show Book Covers").setDesc("Display book covers in notes. Covers are always downloaded to the 'covers' subfolder.").addToggle(
+    new import_obsidian.Setting(container).setName("Show book covers").setDesc("Display book covers in notes. Covers are always downloaded to the 'covers' subfolder.").addToggle(
       (toggle) => toggle.setValue(this.plugin.settings.showCovers).onChange(async (value) => {
         this.plugin.settings.showCovers = value;
         await this.plugin.saveSettings();
@@ -221,9 +221,9 @@ var MoonSyncSettingTab = class extends import_obsidian.PluginSettingTab {
     );
   }
   displayIndexBaseTab(container) {
-    container.createEl("h3", { text: "Library Index" });
+    container.createEl("h3", { text: "Library index" });
     container.createEl("p", { text: "Configure the automatically generated index of all your books.", cls: "moonsync-section-desc" });
-    new import_obsidian.Setting(container).setName("Generate Library Index").setDesc("Create an index note with summary stats and links to all books. Turning this off will delete the existing index note.").addToggle(
+    new import_obsidian.Setting(container).setName("Generate library index").setDesc("Create an index note with summary stats and links to all books. Turning this off will delete the existing index note.").addToggle(
       (toggle) => toggle.setValue(this.plugin.settings.showIndex).onChange(async (value) => {
         this.plugin.settings.showIndex = value;
         await this.plugin.saveSettings();
@@ -234,7 +234,7 @@ var MoonSyncSettingTab = class extends import_obsidian.PluginSettingTab {
         }
       })
     );
-    new import_obsidian.Setting(container).setName("Index Note Title").setDesc("Name of the library index note. Changing this will rename the existing file.").addText(
+    new import_obsidian.Setting(container).setName("Index note title").setDesc("Name of the library index note. Changing this will rename the existing file.").addText(
       (text) => text.setPlaceholder("1. Library Index").setValue(this.plugin.settings.indexNoteTitle).onChange(async (value) => {
         const oldName = this.plugin.settings.indexNoteTitle;
         const newName = value || "1. Library Index";
@@ -247,14 +247,14 @@ var MoonSyncSettingTab = class extends import_obsidian.PluginSettingTab {
         }
       })
     );
-    new import_obsidian.Setting(container).setName("Show Cover Collage").setDesc("Display book covers at the top of the library index").addToggle(
+    new import_obsidian.Setting(container).setName("Show cover collage").setDesc("Display book covers at the top of the library index").addToggle(
       (toggle) => toggle.setValue(this.plugin.settings.showCoverCollage).onChange(async (value) => {
         this.plugin.settings.showCoverCollage = value;
         await this.plugin.saveSettings();
         await this.plugin.refreshIndex();
       })
     );
-    new import_obsidian.Setting(container).setName("Cover Collage Limit").setDesc("Maximum number of covers to show (0 = show all)").addText(
+    new import_obsidian.Setting(container).setName("Cover collage limit").setDesc("Maximum number of covers to show (0 = show all)").addText(
       (text) => text.setPlaceholder("0").setValue(String(this.plugin.settings.coverCollageLimit)).onChange(async (value) => {
         const num = parseInt(value) || 0;
         this.plugin.settings.coverCollageLimit = Math.max(0, num);
@@ -262,8 +262,8 @@ var MoonSyncSettingTab = class extends import_obsidian.PluginSettingTab {
         await this.plugin.refreshIndex();
       })
     );
-    new import_obsidian.Setting(container).setName("Cover Collage Sort").setDesc("How to sort covers in the collage").addDropdown(
-      (dropdown) => dropdown.addOption("alpha", "Alphabetical").addOption("recent", "Most Recent").setValue(this.plugin.settings.coverCollageSort).onChange(async (value) => {
+    new import_obsidian.Setting(container).setName("Cover collage sort").setDesc("How to sort covers in the collage").addDropdown(
+      (dropdown) => dropdown.addOption("alpha", "Alphabetical").addOption("recent", "Most recent").setValue(this.plugin.settings.coverCollageSort).onChange(async (value) => {
         this.plugin.settings.coverCollageSort = value;
         await this.plugin.saveSettings();
         await this.plugin.refreshIndex();
@@ -271,7 +271,7 @@ var MoonSyncSettingTab = class extends import_obsidian.PluginSettingTab {
     );
     container.createEl("h3", { text: "Obsidian Bases", attr: { style: "margin-top: 2em;" } });
     container.createEl("p", { text: "Automatically generate a database configuration file for the Obsidian Bases plugin.", cls: "moonsync-section-desc" });
-    new import_obsidian.Setting(container).setName("Generate Base File").setDesc("Automatically create and update the .base file for the Obsidian Bases plugin. Turning this off will delete the existing base file.").addToggle(
+    new import_obsidian.Setting(container).setName("Generate base file").setDesc("Automatically create and update the .base file for the Obsidian Bases plugin. Turning this off will delete the existing base file.").addToggle(
       (toggle) => toggle.setValue(this.plugin.settings.generateBaseFile).onChange(async (value) => {
         this.plugin.settings.generateBaseFile = value;
         await this.plugin.saveSettings();
@@ -282,7 +282,7 @@ var MoonSyncSettingTab = class extends import_obsidian.PluginSettingTab {
         }
       })
     );
-    new import_obsidian.Setting(container).setName("Base File Name").setDesc("Name of the .base file (without extension). Changing this will rename the existing file.").addText(
+    new import_obsidian.Setting(container).setName("Base file name").setDesc("Name of the .base file (without extension). Changing this will rename the existing file.").addText(
       (text) => text.setPlaceholder("2. Books Database").setValue(this.plugin.settings.baseFileName).onChange(async (value) => {
         const oldName = this.plugin.settings.baseFileName;
         const newName = value || "2. Books Database";
@@ -297,7 +297,7 @@ var MoonSyncSettingTab = class extends import_obsidian.PluginSettingTab {
     );
   }
   displayAboutTab(container) {
-    container.createEl("h3", { text: "About MoonSync" });
+    container.createEl("h3", { text: "About" });
     new import_obsidian.Setting(container).setName("Sync your Moon Reader highlights to Obsidian").setDesc("Book covers, descriptions, and metadata from Google Books/Open Library").addButton(
       (button) => button.setButtonText("GitHub").onClick(() => {
         window.open("https://github.com/titandrive/moonsync");
@@ -697,11 +697,11 @@ var SyncSummaryModal = class extends import_obsidian3.Modal {
     contentEl.empty();
     contentEl.addClass("moonsync-summary-modal");
     const hasFailures = this.result.failedBooks && this.result.failedBooks.length > 0;
-    const title = hasFailures ? "MoonSync Import Complete (with errors)" : "MoonSync Import Complete";
+    const title = hasFailures ? "MoonSync import complete (with errors)" : "MoonSync import complete";
     contentEl.createEl("h2", { text: title });
     const statsContainer = contentEl.createDiv({ cls: "moonsync-stats" });
-    this.createStatItem(statsContainer, this.result.booksCreated.toString(), "Books Imported");
-    this.createStatItem(statsContainer, this.result.booksCreated.toString(), "Notes Created");
+    this.createStatItem(statsContainer, this.result.booksCreated.toString(), "Books imported");
+    this.createStatItem(statsContainer, this.result.booksCreated.toString(), "Notes created");
     this.createStatItem(statsContainer, this.result.totalHighlights.toString(), "Highlights");
     this.createStatItem(statsContainer, this.result.totalNotes.toString(), "Notes");
     if (hasFailures) {
@@ -715,7 +715,7 @@ var SyncSummaryModal = class extends import_obsidian3.Modal {
       }
     }
     const settingsLink = contentEl.createDiv({ cls: "moonsync-settings-link" });
-    const link = settingsLink.createEl("a", { text: "Open MoonSync Settings" });
+    const link = settingsLink.createEl("a", { text: "Open MoonSync settings" });
     link.addEventListener("click", (e) => {
       e.preventDefault();
       this.close();
@@ -723,7 +723,7 @@ var SyncSummaryModal = class extends import_obsidian3.Modal {
       this.app.setting.openTabById("moonsync");
     });
     const buttonContainer = contentEl.createDiv({ cls: "moonsync-button-container" });
-    const openIndexButton = buttonContainer.createEl("button", { text: "Open Library" });
+    const openIndexButton = buttonContainer.createEl("button", { text: "Open library" });
     openIndexButton.addEventListener("click", async () => {
       this.close();
       const indexPath = (0, import_obsidian3.normalizePath)(`${this.settings.outputFolder}/${this.settings.indexNoteTitle}.md`);
@@ -759,7 +759,7 @@ var SelectCoverModal = class extends import_obsidian3.Modal {
     contentEl.empty();
     contentEl.addClass("moonsync-select-cover-modal");
     modalEl.addClass("mod-moonsync-cover");
-    contentEl.createEl("h2", { text: "Fetch Book Cover" });
+    contentEl.createEl("h2", { text: "Fetch book cover" });
     const tabNav = contentEl.createDiv({ cls: "moonsync-tab-nav" });
     const searchTab = tabNav.createEl("button", { text: "Search", cls: "moonsync-tab active" });
     const urlTab = tabNav.createEl("button", { text: "Import", cls: "moonsync-tab" });
@@ -905,7 +905,7 @@ var SelectBookMetadataModal = class extends import_obsidian3.Modal {
     contentEl.empty();
     contentEl.addClass("moonsync-select-cover-modal");
     modalEl.addClass("mod-moonsync-cover");
-    contentEl.createEl("h2", { text: "Fetch Book Metadata" });
+    contentEl.createEl("h2", { text: "Fetch book metadata" });
     contentEl.createEl("p", {
       text: "Select a book to replace all metadata including cover, description, and details.",
       cls: "moonsync-url-description"
@@ -1022,7 +1022,7 @@ var CreateBookModal = class extends import_obsidian3.Modal {
     contentEl.empty();
     contentEl.addClass("moonsync-select-cover-modal");
     modalEl.addClass("mod-moonsync-cover");
-    contentEl.createEl("h2", { text: "Create Book Note" });
+    contentEl.createEl("h2", { text: "Create book note" });
     contentEl.createEl("p", {
       text: "Search for a book and select it to create a note.",
       cls: "moonsync-url-description"
@@ -1548,7 +1548,7 @@ function generateBookNote(bookData, settings) {
     lines.push("");
   }
   if (progress !== null || currentChapter !== null || lastReadTimestamp !== null) {
-    lines.push("> [!moonsync-reading-progress]+ Reading Progress");
+    lines.push("> [!moonsync-reading-progress]+ Reading progress");
     if (progress !== null) {
       lines.push(`> - **Progress:** ${progress.toFixed(1)}%`);
     }
@@ -1556,7 +1556,7 @@ function generateBookNote(bookData, settings) {
       lines.push(`> - **Chapter:** ${currentChapter}`);
     }
     if (lastReadTimestamp !== null) {
-      lines.push(`> - **Last Read:** ${formatDate(lastReadTimestamp)}`);
+      lines.push(`> - **Last read:** ${formatDate(lastReadTimestamp)}`);
     }
     lines.push("");
   }
@@ -1570,16 +1570,16 @@ function generateBookNote(bookData, settings) {
     lines.push("");
   }
   if (highlights.length > 0) {
-    lines.push("## Moon Reader Highlights");
+    lines.push("## Moon Reader highlights");
     lines.push("");
     for (const highlight of highlights) {
       lines.push(formatHighlight(highlight, settings.showHighlightColors));
       lines.push("");
     }
   }
-  lines.push("## My Notes");
+  lines.push("## My notes");
   lines.push("");
-  lines.push("> [!moonsync-user-notes]+ Your Notes");
+  lines.push("> [!moonsync-user-notes]+ Your notes");
   lines.push("> Add your thoughts, analysis, and notes here. This section is preserved across syncs.");
   lines.push("");
   return lines.join("\n");
@@ -1660,7 +1660,7 @@ function generateIndexNote(books, settings) {
   lines.push(`- **Highlights:** ${totalHighlights}`);
   lines.push(`- **Notes:** ${totalNotes}`);
   if (booksWithProgress.length > 0) {
-    lines.push(`- **Average Progress:** ${avgProgress.toFixed(1)}%`);
+    lines.push(`- **Average progress:** ${avgProgress.toFixed(1)}%`);
   }
   lines.push("");
   lines.push("## Books");
@@ -1707,9 +1707,9 @@ function generateBaseFile(settings) {
   lines.push("  notes_count:");
   lines.push("    displayName: Notes");
   lines.push("  last_synced:");
-  lines.push("    displayName: Last Synced");
+  lines.push("    displayName: Last synced");
   lines.push("  last_read:");
-  lines.push("    displayName: Last Read");
+  lines.push("    displayName: Last read");
   lines.push("  publisher:");
   lines.push("    displayName: Publisher");
   lines.push("  series:");
@@ -2170,10 +2170,10 @@ function mergeManualNoteWithMoonReader(existingContent, bookData, settings) {
   lines.push("");
   lines.push(contentAfterFrontmatter);
   lines.push("");
-  lines.push("## Moon Reader Highlights");
+  lines.push("## Moon Reader highlights");
   lines.push("");
   if (settings.showReadingProgress && (bookData.progress !== null || bookData.currentChapter !== null)) {
-    lines.push("**Reading Progress:**");
+    lines.push("**Reading progress:**");
     if (bookData.progress !== null) {
       lines.push(`- Progress: ${bookData.progress.toFixed(1)}%`);
     }
@@ -2189,12 +2189,12 @@ function mergeManualNoteWithMoonReader(existingContent, bookData, settings) {
   return lines.join("\n");
 }
 function mergeExistingNoteWithHighlights(existingContent, bookData, settings) {
-  const myNotesPattern = /\n## My Notes\n([\s\S]*?)(?=\n## |\n---|\s*$)/;
+  const myNotesPattern = /\n## My [Nn]otes\n([\s\S]*?)(?=\n## |\n---|\s*$)/;
   const myNotesMatch = existingContent.match(myNotesPattern);
   let userNotesContent = "";
   if (myNotesMatch) {
     let notesSection = myNotesMatch[1];
-    const placeholderPattern = /^> \[!moonsync-user-notes\]\+ Your Notes\n> Add your thoughts, analysis, and notes here\. This section is preserved across syncs\.\n?/;
+    const placeholderPattern = /^> \[!moonsync-user-notes\]\+ Your [Nn]otes\n> Add your thoughts, analysis, and notes here\. This section is preserved across syncs\.\n?/;
     notesSection = notesSection.replace(placeholderPattern, "").trim();
     if (notesSection) {
       userNotesContent = notesSection;
@@ -2202,7 +2202,7 @@ function mergeExistingNoteWithHighlights(existingContent, bookData, settings) {
   }
   let freshNote = generateBookNote(bookData, settings);
   if (userNotesContent) {
-    const placeholderInFresh = "> [!moonsync-user-notes]+ Your Notes\n> Add your thoughts, analysis, and notes here. This section is preserved across syncs.";
+    const placeholderInFresh = "> [!moonsync-user-notes]+ Your notes\n> Add your thoughts, analysis, and notes here. This section is preserved across syncs.";
     freshNote = freshNote.replace(placeholderInFresh, userNotesContent);
   }
   return freshNote;
@@ -2695,7 +2695,6 @@ var MoonSyncPlugin = class extends import_obsidian7.Plugin {
     super(...arguments);
     this.settings = DEFAULT_SETTINGS;
     this.ribbonIconEl = null;
-    this.styleEl = null;
   }
   async onload() {
     await this.loadSettings();
@@ -2704,27 +2703,27 @@ var MoonSyncPlugin = class extends import_obsidian7.Plugin {
     this.updateContentVisibility();
     this.addCommand({
       id: "sync-now",
-      name: "Sync Now",
+      name: "Sync now",
       callback: () => this.runSync()
     });
     this.addCommand({
       id: "create-book-note",
-      name: "Create Book Note",
+      name: "Create book note",
       callback: () => this.openCreateBookModal()
     });
     this.addCommand({
       id: "import-note",
-      name: "Import Note",
+      name: "Import note",
       callback: () => this.importManualExport()
     });
     this.addCommand({
       id: "refetch-cover",
-      name: "Fetch Book Cover",
+      name: "Fetch book cover",
       callback: () => this.refetchBookCover()
     });
     this.addCommand({
       id: "fetch-metadata",
-      name: "Fetch Book Metadata",
+      name: "Fetch book metadata",
       callback: () => this.fetchBookMetadata()
     });
     if (this.settings.syncOnStartup) {
@@ -2734,10 +2733,12 @@ var MoonSyncPlugin = class extends import_obsidian7.Plugin {
     }
   }
   onunload() {
-    if (this.styleEl) {
-      this.styleEl.remove();
-      this.styleEl = null;
-    }
+    document.body.classList.remove(
+      "moonsync-hide-covers",
+      "moonsync-hide-reading-progress",
+      "moonsync-hide-description",
+      "moonsync-hide-highlight-colors"
+    );
   }
   updateRibbonIcon() {
     if (this.ribbonIconEl) {
@@ -2747,36 +2748,16 @@ var MoonSyncPlugin = class extends import_obsidian7.Plugin {
     if (this.settings.showRibbonIcon) {
       this.ribbonIconEl = this.addRibbonIcon(
         "book-open",
-        "MoonSync: Sync Now",
+        "MoonSync: Sync now",
         () => this.runSync()
       );
     }
   }
   updateContentVisibility() {
-    if (this.styleEl) {
-      this.styleEl.remove();
-      this.styleEl = null;
-    }
-    this.styleEl = document.createElement("style");
-    this.styleEl.id = "moonsync-content-visibility";
-    const rules = [];
-    rules.push(`.callout[data-callout="moonsync-reading-progress"] { --callout-color: var(--callout-success); }`);
-    rules.push(`.callout[data-callout="moonsync-description"] { --callout-color: var(--callout-quote); }`);
-    rules.push(`.callout[data-callout="moonsync-user-notes"] { --callout-color: 168, 130, 255; }`);
-    if (!this.settings.showCovers) {
-      rules.push(`.internal-embed[src*="moonsync-covers/"] { display: none !important; }`);
-    }
-    if (!this.settings.showReadingProgress) {
-      rules.push(`.callout[data-callout="moonsync-reading-progress"] { display: none !important; }`);
-    }
-    if (!this.settings.showDescription) {
-      rules.push(`.callout[data-callout="moonsync-description"] { display: none !important; }`);
-    }
-    if (!this.settings.showHighlightColors) {
-      rules.push(`.callout[data-callout="info"], .callout[data-callout="tip"], .callout[data-callout="warning"] { --callout-color: var(--callout-quote); }`);
-    }
-    this.styleEl.textContent = rules.join("\n");
-    document.head.appendChild(this.styleEl);
+    document.body.classList.toggle("moonsync-hide-covers", !this.settings.showCovers);
+    document.body.classList.toggle("moonsync-hide-reading-progress", !this.settings.showReadingProgress);
+    document.body.classList.toggle("moonsync-hide-description", !this.settings.showDescription);
+    document.body.classList.toggle("moonsync-hide-highlight-colors", !this.settings.showHighlightColors);
   }
   async runSync() {
     if (!this.settings.dropboxPath) {
