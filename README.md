@@ -28,7 +28,9 @@ MoonSync will then keep track of that book and update the note as you make new h
 - [BRAT](https://github.com/TfTHacker/obsidian42-brat) 
 
 ## Installation
-MoonSync can be installed either via the BRAT Plugin (recommended) or via a custom install:
+MoonSync can be installed either via the BRAT Plugin (recommended) or via a custom install. 
+
+*This plugin has been submitted as a community plugin and is pending review*
 
 
 ### BRAT Installation
@@ -103,7 +105,7 @@ If in the future, you begin reading that same book in Moon Reader, and make more
 
 MoonSync provides several commands accessible via the command palette (`Cmd/Ctrl + P`):
 
-<img src="assets/CommandPalette.png" alt="Command Palette" width="420">
+<img src="assets/CommandPalette.png" alt="Command Palette" width="500">
 
 ### Sync Now
 Synchronize all books from Moon Reader. Only updates notes when highlights or progress have changed.
