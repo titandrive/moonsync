@@ -58,7 +58,7 @@ function parseAnnotationFile(data: Buffer, filename: string): AnnotationFile | n
 				const id = parseInt(lines[i++] || "0", 10);
 				const title = lines[i++] || "";
 				const fullPath = lines[i++] || "";
-				const lowerPath = lines[i++] || "";
+				i++; // skip lower path
 				const chapter = parseInt(lines[i++] || "0", 10);
 				i++; // skip 0
 				const position = parseInt(lines[i++] || "0", 10);
@@ -127,7 +127,7 @@ function parseAnnotationFile(data: Buffer, filename: string): AnnotationFile | n
 			highlights,
 		};
 	} catch (error) {
-		console.log(`MoonSync: Failed to parse annotation file ${filename}`, error);
+		console.debug(`MoonSync: Failed to parse annotation file ${filename}`, error);
 		return null;
 	}
 }
@@ -222,7 +222,7 @@ export async function parseAnnotationFiles(dropboxPath: string, trackBooksWithou
 					bookData.highlights.push(...parsed.highlights);
 				}
 			} catch (error) {
-				console.log(`MoonSync: Error reading ${anFile}`, error);
+				console.debug(`MoonSync: Error reading ${anFile}`, error);
 			}
 		}
 
@@ -293,7 +293,7 @@ export async function parseAnnotationFiles(dropboxPath: string, trackBooksWithou
 					});
 				}
 			} catch (error) {
-				console.log(`MoonSync: Error reading ${poFile}`, error);
+				console.debug(`MoonSync: Error reading ${poFile}`, error);
 			}
 		}
 
@@ -304,7 +304,7 @@ export async function parseAnnotationFiles(dropboxPath: string, trackBooksWithou
 
 		return Array.from(bookDataMap.values());
 	} catch (error) {
-		console.log("MoonSync: Failed to read Cache directory", error);
+		console.debug("MoonSync: Failed to read Cache directory", error);
 		return [];
 	}
 }

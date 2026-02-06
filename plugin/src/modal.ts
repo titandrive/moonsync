@@ -1,7 +1,6 @@
 import { App, Modal, Setting, normalizePath } from "obsidian";
 import { SyncResult } from "./sync";
 import { MoonSyncSettings } from "./types";
-import { generateFilename } from "./writer/markdown";
 import { fetchMultipleBookCovers, BookInfoResult } from "./covers";
 
 export class SyncSummaryModal extends Modal {
@@ -54,8 +53,9 @@ export class SyncSummaryModal extends Modal {
 			e.preventDefault();
 			this.close();
 			// Open Obsidian settings and navigate to MoonSync tab
-			(this.app as any).setting.open();
-			(this.app as any).setting.openTabById("moonsync");
+			const app = this.app as App & { setting: { open(): void; openTabById(id: string): void } };
+			app.setting.open();
+			app.setting.openTabById("moonsync");
 		});
 
 		// Button container with two buttons
@@ -111,7 +111,7 @@ export class SelectCoverModal extends Modal {
 		this.onSelect = onSelect;
 	}
 
-	async onOpen() {
+	onOpen() {
 		const { contentEl, modalEl } = this;
 		contentEl.empty();
 		contentEl.addClass("moonsync-select-cover-modal");
@@ -157,7 +157,7 @@ export class SelectCoverModal extends Modal {
 				text.inputEl.addEventListener("keydown", (e) => {
 					if (e.key === "Enter") {
 						e.preventDefault();
-						this.performSearch();
+						void this.performSearch();
 					}
 				});
 			});
@@ -175,7 +175,7 @@ export class SelectCoverModal extends Modal {
 				text.inputEl.addEventListener("keydown", (e) => {
 					if (e.key === "Enter") {
 						e.preventDefault();
-						this.performSearch();
+						void this.performSearch();
 					}
 				});
 			});
@@ -232,7 +232,7 @@ export class SelectCoverModal extends Modal {
 			});
 
 		// Perform initial search after a short delay to ensure modal is fully ready
-		setTimeout(() => this.performSearch(), 150);
+		setTimeout(() => { void this.performSearch(); }, 150);
 	}
 
 	private async performSearch() {
@@ -280,7 +280,7 @@ export class SelectCoverModal extends Modal {
 			const coverItem = gridContainer.createDiv({ cls: "moonsync-cover-item" });
 
 			// Cover image
-			const img = coverItem.createEl("img", {
+			coverItem.createEl("img", {
 				attr: {
 					src: cover.coverUrl || "",
 					alt: cover.title || "Book cover"
@@ -336,7 +336,7 @@ export class SelectBookMetadataModal extends Modal {
 		this.onSelect = onSelect;
 	}
 
-	async onOpen() {
+	onOpen() {
 		const { contentEl, modalEl } = this;
 		contentEl.empty();
 		contentEl.addClass("moonsync-select-cover-modal");
@@ -362,7 +362,7 @@ export class SelectBookMetadataModal extends Modal {
 				text.inputEl.addEventListener("keydown", (e) => {
 					if (e.key === "Enter") {
 						e.preventDefault();
-						this.performSearch();
+						void this.performSearch();
 					}
 				});
 			});
@@ -380,7 +380,7 @@ export class SelectBookMetadataModal extends Modal {
 				text.inputEl.addEventListener("keydown", (e) => {
 					if (e.key === "Enter") {
 						e.preventDefault();
-						this.performSearch();
+						void this.performSearch();
 					}
 				});
 			});
@@ -398,7 +398,7 @@ export class SelectBookMetadataModal extends Modal {
 		this.resultsContainer = contentEl.createDiv({ cls: "moonsync-cover-results" });
 
 		// Perform initial search after a short delay
-		setTimeout(() => this.performSearch(), 150);
+		setTimeout(() => { void this.performSearch(); }, 150);
 	}
 
 	private async performSearch() {
@@ -513,7 +513,7 @@ export class CreateBookModal extends Modal {
 		this.onSubmit = onSubmit;
 	}
 
-	async onOpen() {
+	onOpen() {
 		const { contentEl, modalEl } = this;
 		contentEl.empty();
 		contentEl.addClass("moonsync-select-cover-modal");
@@ -538,7 +538,7 @@ export class CreateBookModal extends Modal {
 				text.inputEl.addEventListener("keydown", (e) => {
 					if (e.key === "Enter") {
 						e.preventDefault();
-						this.performSearch();
+						void this.performSearch();
 					}
 				});
 			});
@@ -556,7 +556,7 @@ export class CreateBookModal extends Modal {
 				text.inputEl.addEventListener("keydown", (e) => {
 					if (e.key === "Enter") {
 						e.preventDefault();
-						this.performSearch();
+						void this.performSearch();
 					}
 				});
 			});

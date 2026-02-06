@@ -38,7 +38,7 @@ export async function loadCache(app: App, outputFolder: string): Promise<BookInf
 			return JSON.parse(data);
 		}
 	} catch (error) {
-		console.log("MoonSync: Failed to load cache, starting fresh", error);
+		console.debug("MoonSync: Failed to load cache, starting fresh", error);
 	}
 
 	return {};
@@ -53,7 +53,7 @@ export async function saveCache(app: App, outputFolder: string, cache: BookInfoC
 	try {
 		await app.vault.adapter.write(cachePath, JSON.stringify(cache, null, 2));
 	} catch (error) {
-		console.log("MoonSync: Failed to save cache", error);
+		console.debug("MoonSync: Failed to save cache", error);
 	}
 }
 

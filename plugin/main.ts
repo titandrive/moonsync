@@ -1,4 +1,4 @@
-import { Plugin, Notice, setIcon, normalizePath, TFile } from "obsidian";
+import { Plugin, Notice, normalizePath, TFile, FileSystemAdapter } from "obsidian";
 import { MoonSyncSettings, DEFAULT_SETTINGS, BookData } from "./src/types";
 import { MoonSyncSettingTab } from "./src/settings";
 import { syncFromMoonReader, showSyncResults, refreshIndexNote, refreshBaseFile } from "./src/sync";
@@ -29,7 +29,7 @@ export default class MoonSyncPlugin extends Plugin {
 		this.addCommand({
 			id: "sync-now",
 			name: "Sync now",
-			callback: () => this.runSync(),
+			callback: () => { void this.runSync(); },
 		});
 
 		// Add create book note command
@@ -43,28 +43,28 @@ export default class MoonSyncPlugin extends Plugin {
 		this.addCommand({
 			id: "import-note",
 			name: "Import note",
-			callback: () => this.importManualExport(),
+			callback: () => { void this.importManualExport(); },
 		});
 
 		// Add fetch cover command
 		this.addCommand({
 			id: "refetch-cover",
 			name: "Fetch book cover",
-			callback: () => this.refetchBookCover(),
+			callback: () => { void this.refetchBookCover(); },
 		});
 
 		// Add fetch metadata command
 		this.addCommand({
 			id: "fetch-metadata",
 			name: "Fetch book metadata",
-			callback: () => this.fetchBookMetadata(),
+			callback: () => { void this.fetchBookMetadata(); },
 		});
 
 		// Sync on startup if enabled
 		if (this.settings.syncOnStartup) {
 			// Wait a bit for Obsidian to fully load
 			this.app.workspace.onLayoutReady(() => {
-				setTimeout(() => this.runSync(), 2000);
+				setTimeout(() => { void this.runSync(); }, 2000);
 			});
 		}
 	}
@@ -91,7 +91,7 @@ export default class MoonSyncPlugin extends Plugin {
 			this.ribbonIconEl = this.addRibbonIcon(
 				"book-open",
 				"MoonSync: Sync now",
-				() => this.runSync()
+				() => { void this.runSync(); }
 			);
 		}
 	}
@@ -130,7 +130,7 @@ export default class MoonSyncPlugin extends Plugin {
 	 */
 	private getWasmPath(): string {
 		// The WASM file is copied to the plugin folder during build
-		const pluginDir = (this.app.vault.adapter as any).basePath;
+		const pluginDir = (this.app.vault.adapter as FileSystemAdapter).getBasePath();
 		const pluginPath = this.manifest.dir;
 		if (pluginPath) {
 			return join(pluginDir, pluginPath, "sql-wasm.wasm");
@@ -200,7 +200,7 @@ export default class MoonSyncPlugin extends Plugin {
 						coverPath = `moonsync-covers/${coverFilename}`;
 					}
 				} catch (error) {
-					console.log(`MoonSync: Failed to download cover for "${title}"`, error);
+					console.debug(`MoonSync: Failed to download cover for "${title}"`, error);
 				}
 			}
 
@@ -372,7 +372,7 @@ export default class MoonSyncPlugin extends Plugin {
 				series = bookInfo.series;
 				language = bookInfo.language;
 			} catch (error) {
-				console.log(`MoonSync: Failed to fetch book info for "${exportData.title}"`, error);
+				console.debug(`MoonSync: Failed to fetch book info for "${exportData.title}"`, error);
 			}
 
 			// Create BookData structure

@@ -99,7 +99,7 @@ var MoonSyncSettingTab = class extends import_obsidian.PluginSettingTab {
   display() {
     const { containerEl } = this;
     containerEl.empty();
-    containerEl.createEl("h2", { text: "MoonSync settings" });
+    new import_obsidian.Setting(containerEl).setName("MoonSync settings").setHeading();
     const tabNav = containerEl.createDiv({ cls: "moonsync-tab-nav" });
     const tabs = [
       { id: "configuration", name: "Configuration" },
@@ -127,8 +127,7 @@ var MoonSyncSettingTab = class extends import_obsidian.PluginSettingTab {
     this.displayAboutTab(aboutTab);
   }
   displayConfigurationTab(container) {
-    container.createEl("h3", { text: "Configuration" });
-    container.createEl("p", { text: "Set up your Moon Reader backup location and note output folder.", cls: "moonsync-section-desc" });
+    new import_obsidian.Setting(container).setName("Configuration").setDesc("Set up your Moon Reader backup location and note output folder.").setHeading();
     let textComponent;
     let validationEl;
     const pathSetting = new import_obsidian.Setting(container).setName("Moon Reader Dropbox path").setDesc(
@@ -138,7 +137,7 @@ var MoonSyncSettingTab = class extends import_obsidian.PluginSettingTab {
       text.setPlaceholder("/Users/you/Dropbox/Apps/Books").setValue(this.plugin.settings.dropboxPath).onChange(async (value) => {
         this.plugin.settings.dropboxPath = value;
         await this.plugin.saveSettings();
-        await this.validateDropboxPath(value, validationEl);
+        this.validateDropboxPath(value, validationEl);
       });
     }).addButton(
       (button) => button.setButtonText("Browse").onClick(async () => {
@@ -147,7 +146,7 @@ var MoonSyncSettingTab = class extends import_obsidian.PluginSettingTab {
           this.plugin.settings.dropboxPath = folder;
           textComponent.setValue(folder);
           await this.plugin.saveSettings();
-          await this.validateDropboxPath(folder, validationEl);
+          this.validateDropboxPath(folder, validationEl);
         }
       })
     );
@@ -161,8 +160,7 @@ var MoonSyncSettingTab = class extends import_obsidian.PluginSettingTab {
         await this.plugin.saveSettings();
       })
     );
-    container.createEl("h3", { text: "Sync", attr: { style: "margin-top: 2em;" } });
-    container.createEl("p", { text: "Control when and how MoonSync syncs your highlights.", cls: "moonsync-section-desc" });
+    new import_obsidian.Setting(container).setName("Sync").setDesc("Control when and how MoonSync syncs your highlights.").setHeading();
     new import_obsidian.Setting(container).setName("Sync now").setDesc("Manually trigger a sync from Moon Reader").addButton(
       (button) => button.setButtonText("Sync").onClick(async () => {
         await this.plugin.runSync();
@@ -189,8 +187,7 @@ var MoonSyncSettingTab = class extends import_obsidian.PluginSettingTab {
     );
   }
   displayContentTab(container) {
-    container.createEl("h3", { text: "Note content" });
-    container.createEl("p", { text: "Control what data is included in your book notes.", cls: "moonsync-section-desc" });
+    new import_obsidian.Setting(container).setName("Note content").setDesc("Control what data is included in your book notes.").setHeading();
     new import_obsidian.Setting(container).setName("Show description").setDesc("Include book description in generated notes").addToggle(
       (toggle) => toggle.setValue(this.plugin.settings.showDescription).onChange(async (value) => {
         this.plugin.settings.showDescription = value;
@@ -221,8 +218,7 @@ var MoonSyncSettingTab = class extends import_obsidian.PluginSettingTab {
     );
   }
   displayIndexBaseTab(container) {
-    container.createEl("h3", { text: "Library index" });
-    container.createEl("p", { text: "Configure the automatically generated index of all your books.", cls: "moonsync-section-desc" });
+    new import_obsidian.Setting(container).setName("Library index").setDesc("Configure the automatically generated index of all your books.").setHeading();
     new import_obsidian.Setting(container).setName("Generate library index").setDesc("Create an index note with summary stats and links to all books. Turning this off will delete the existing index note.").addToggle(
       (toggle) => toggle.setValue(this.plugin.settings.showIndex).onChange(async (value) => {
         this.plugin.settings.showIndex = value;
@@ -269,8 +265,7 @@ var MoonSyncSettingTab = class extends import_obsidian.PluginSettingTab {
         await this.plugin.refreshIndex();
       })
     );
-    container.createEl("h3", { text: "Obsidian Bases", attr: { style: "margin-top: 2em;" } });
-    container.createEl("p", { text: "Automatically generate a database configuration file for the Obsidian Bases plugin.", cls: "moonsync-section-desc" });
+    new import_obsidian.Setting(container).setName("Obsidian Bases").setDesc("Automatically generate a database configuration file for the Obsidian Bases plugin.").setHeading();
     new import_obsidian.Setting(container).setName("Generate base file").setDesc("Automatically create and update the .base file for the Obsidian Bases plugin. Turning this off will delete the existing base file.").addToggle(
       (toggle) => toggle.setValue(this.plugin.settings.generateBaseFile).onChange(async (value) => {
         this.plugin.settings.generateBaseFile = value;
@@ -297,20 +292,20 @@ var MoonSyncSettingTab = class extends import_obsidian.PluginSettingTab {
     );
   }
   displayAboutTab(container) {
-    container.createEl("h3", { text: "About" });
+    new import_obsidian.Setting(container).setName("About").setHeading();
     new import_obsidian.Setting(container).setName("Sync your Moon Reader highlights to Obsidian").setDesc("Book covers, descriptions, and metadata from Google Books/Open Library").addButton(
       (button) => button.setButtonText("GitHub").onClick(() => {
         window.open("https://github.com/titandrive/moonsync");
       })
     );
-    container.createEl("h3", { text: "Support", attr: { style: "margin-top: 2em;" } });
+    new import_obsidian.Setting(container).setName("Support").setHeading();
     new import_obsidian.Setting(container).setName("Buy me a coffee").setDesc("If you find this plugin useful, consider supporting its development!").addButton(
       (button) => button.setButtonText("Ko-fi").onClick(() => {
         window.open("https://ko-fi.com/titandrive");
       })
     );
   }
-  async validateDropboxPath(path, validationEl) {
+  validateDropboxPath(path, validationEl) {
     validationEl.empty();
     if (!path) {
       return;
@@ -430,7 +425,7 @@ async function batchFetchBookInfo(books, concurrency = 5) {
           const info = await fetchBookInfo(book.title, book.author);
           return { key, info };
         } catch (error) {
-          console.log(`MoonSync: Failed to fetch info for "${book.title}"`, error);
+          console.debug(`MoonSync: Failed to fetch info for "${book.title}"`, error);
           return { key, info: null };
         }
       })
@@ -505,7 +500,7 @@ async function fetchFromOpenLibrary(title, author) {
       }
     }
   } catch (error) {
-    console.log("MoonSync: Open Library search failed", error);
+    console.debug("MoonSync: Open Library search failed", error);
   }
   return result;
 }
@@ -560,7 +555,7 @@ async function fetchFromGoogleBooks(title, author) {
       }
     }
   } catch (error) {
-    console.log("MoonSync: Google Books search failed", error);
+    console.debug("MoonSync: Google Books search failed", error);
   }
   return result;
 }
@@ -597,7 +592,7 @@ async function fetchMultipleBookCovers(title, author, maxResults = 10) {
       }
     }
   } catch (error) {
-    console.log("MoonSync: Google Books search failed", error);
+    console.debug("MoonSync: Google Books search failed", error);
   }
   try {
     const olQuery = encodeURIComponent(`${title} ${author}`);
@@ -631,7 +626,7 @@ async function fetchMultipleBookCovers(title, author, maxResults = 10) {
       }
     }
   } catch (error) {
-    console.log("MoonSync: Open Library search failed", error);
+    console.debug("MoonSync: Open Library search failed", error);
   }
   const uniqueResults = results.filter(
     (result, index, self) => index === self.findIndex((r) => r.coverUrl === result.coverUrl)
@@ -643,7 +638,7 @@ async function downloadCover(url) {
     const response = await (0, import_obsidian2.requestUrl)({ url });
     return response.arrayBuffer;
   } catch (error) {
-    console.log("MoonSync: Failed to download cover", error);
+    console.debug("MoonSync: Failed to download cover", error);
     return null;
   }
 }
@@ -668,7 +663,7 @@ async function downloadAndResizeCover(url, maxWidth = 400, maxHeight = 600) {
     canvas.height = height;
     const ctx = canvas.getContext("2d");
     if (!ctx) {
-      console.log("MoonSync: Failed to get canvas context");
+      console.debug("MoonSync: Failed to get canvas context");
       return arrayBuffer;
     }
     ctx.drawImage(imageBitmap, 0, 0, width, height);
@@ -680,7 +675,7 @@ async function downloadAndResizeCover(url, maxWidth = 400, maxHeight = 600) {
     }
     return await resizedBlob.arrayBuffer();
   } catch (error) {
-    console.log("MoonSync: Failed to download/resize cover", error);
+    console.debug("MoonSync: Failed to download/resize cover", error);
     return null;
   }
 }
@@ -719,8 +714,9 @@ var SyncSummaryModal = class extends import_obsidian3.Modal {
     link.addEventListener("click", (e) => {
       e.preventDefault();
       this.close();
-      this.app.setting.open();
-      this.app.setting.openTabById("moonsync");
+      const app = this.app;
+      app.setting.open();
+      app.setting.openTabById("moonsync");
     });
     const buttonContainer = contentEl.createDiv({ cls: "moonsync-button-container" });
     const openIndexButton = buttonContainer.createEl("button", { text: "Open library" });
@@ -754,7 +750,7 @@ var SelectCoverModal = class extends import_obsidian3.Modal {
     this.author = author;
     this.onSelect = onSelect;
   }
-  async onOpen() {
+  onOpen() {
     const { contentEl, modalEl } = this;
     contentEl.empty();
     contentEl.addClass("moonsync-select-cover-modal");
@@ -784,7 +780,7 @@ var SelectCoverModal = class extends import_obsidian3.Modal {
       text.inputEl.addEventListener("keydown", (e) => {
         if (e.key === "Enter") {
           e.preventDefault();
-          this.performSearch();
+          void this.performSearch();
         }
       });
     });
@@ -796,7 +792,7 @@ var SelectCoverModal = class extends import_obsidian3.Modal {
       text.inputEl.addEventListener("keydown", (e) => {
         if (e.key === "Enter") {
           e.preventDefault();
-          this.performSearch();
+          void this.performSearch();
         }
       });
     });
@@ -832,7 +828,9 @@ var SelectCoverModal = class extends import_obsidian3.Modal {
         }
       });
     });
-    setTimeout(() => this.performSearch(), 150);
+    setTimeout(() => {
+      void this.performSearch();
+    }, 150);
   }
   async performSearch() {
     if (!this.resultsContainer)
@@ -863,7 +861,7 @@ var SelectCoverModal = class extends import_obsidian3.Modal {
     const gridContainer = this.resultsContainer.createDiv({ cls: "moonsync-cover-grid" });
     for (const cover of covers) {
       const coverItem = gridContainer.createDiv({ cls: "moonsync-cover-item" });
-      const img = coverItem.createEl("img", {
+      coverItem.createEl("img", {
         attr: {
           src: cover.coverUrl || "",
           alt: cover.title || "Book cover"
@@ -900,7 +898,7 @@ var SelectBookMetadataModal = class extends import_obsidian3.Modal {
     this.author = author;
     this.onSelect = onSelect;
   }
-  async onOpen() {
+  onOpen() {
     const { contentEl, modalEl } = this;
     contentEl.empty();
     contentEl.addClass("moonsync-select-cover-modal");
@@ -917,7 +915,7 @@ var SelectBookMetadataModal = class extends import_obsidian3.Modal {
       text.inputEl.addEventListener("keydown", (e) => {
         if (e.key === "Enter") {
           e.preventDefault();
-          this.performSearch();
+          void this.performSearch();
         }
       });
     });
@@ -929,7 +927,7 @@ var SelectBookMetadataModal = class extends import_obsidian3.Modal {
       text.inputEl.addEventListener("keydown", (e) => {
         if (e.key === "Enter") {
           e.preventDefault();
-          this.performSearch();
+          void this.performSearch();
         }
       });
     });
@@ -938,7 +936,9 @@ var SelectBookMetadataModal = class extends import_obsidian3.Modal {
       button.setButtonText("Search").setCta().onClick(() => this.performSearch());
     });
     this.resultsContainer = contentEl.createDiv({ cls: "moonsync-cover-results" });
-    setTimeout(() => this.performSearch(), 150);
+    setTimeout(() => {
+      void this.performSearch();
+    }, 150);
   }
   async performSearch() {
     if (!this.resultsContainer)
@@ -1017,7 +1017,7 @@ var CreateBookModal = class extends import_obsidian3.Modal {
     this.settings = settings;
     this.onSubmit = onSubmit;
   }
-  async onOpen() {
+  onOpen() {
     const { contentEl, modalEl } = this;
     contentEl.empty();
     contentEl.addClass("moonsync-select-cover-modal");
@@ -1034,7 +1034,7 @@ var CreateBookModal = class extends import_obsidian3.Modal {
       text.inputEl.addEventListener("keydown", (e) => {
         if (e.key === "Enter") {
           e.preventDefault();
-          this.performSearch();
+          void this.performSearch();
         }
       });
     });
@@ -1046,7 +1046,7 @@ var CreateBookModal = class extends import_obsidian3.Modal {
       text.inputEl.addEventListener("keydown", (e) => {
         if (e.key === "Enter") {
           e.preventDefault();
-          this.performSearch();
+          void this.performSearch();
         }
       });
     });
@@ -1214,7 +1214,7 @@ function parseAnnotationFile(data, filename) {
         const id = parseInt(lines[i++] || "0", 10);
         const title = lines[i++] || "";
         const fullPath = lines[i++] || "";
-        const lowerPath = lines[i++] || "";
+        i++;
         const chapter = parseInt(lines[i++] || "0", 10);
         i++;
         const position = parseInt(lines[i++] || "0", 10);
@@ -1268,7 +1268,7 @@ function parseAnnotationFile(data, filename) {
       highlights
     };
   } catch (error) {
-    console.log(`MoonSync: Failed to parse annotation file ${filename}`, error);
+    console.debug(`MoonSync: Failed to parse annotation file ${filename}`, error);
     return null;
   }
 }
@@ -1338,7 +1338,7 @@ async function parseAnnotationFiles(dropboxPath, trackBooksWithoutHighlights = f
           bookData.highlights.push(...parsed.highlights);
         }
       } catch (error) {
-        console.log(`MoonSync: Error reading ${anFile}`, error);
+        console.debug(`MoonSync: Error reading ${anFile}`, error);
       }
     }
     const poFiles = files.filter((f) => f.endsWith(".po"));
@@ -1398,7 +1398,7 @@ async function parseAnnotationFiles(dropboxPath, trackBooksWithoutHighlights = f
           });
         }
       } catch (error) {
-        console.log(`MoonSync: Error reading ${poFile}`, error);
+        console.debug(`MoonSync: Error reading ${poFile}`, error);
       }
     }
     for (const bookData of bookDataMap.values()) {
@@ -1406,7 +1406,7 @@ async function parseAnnotationFiles(dropboxPath, trackBooksWithoutHighlights = f
     }
     return Array.from(bookDataMap.values());
   } catch (error) {
-    console.log("MoonSync: Failed to read Cache directory", error);
+    console.debug("MoonSync: Failed to read Cache directory", error);
     return [];
   }
 }
@@ -1782,7 +1782,7 @@ async function loadCache(app, outputFolder) {
       return JSON.parse(data);
     }
   } catch (error) {
-    console.log("MoonSync: Failed to load cache, starting fresh", error);
+    console.debug("MoonSync: Failed to load cache, starting fresh", error);
   }
   return {};
 }
@@ -1791,7 +1791,7 @@ async function saveCache(app, outputFolder, cache) {
   try {
     await app.vault.adapter.write(cachePath, JSON.stringify(cache, null, 2));
   } catch (error) {
-    console.log("MoonSync: Failed to save cache", error);
+    console.debug("MoonSync: Failed to save cache", error);
   }
 }
 function getCachedInfo(cache, title, author) {
@@ -1825,7 +1825,7 @@ async function scanAllBookNotes(app, outputPath) {
         books.push(bookData);
       }
     } catch (error) {
-      console.log(`MoonSync: Failed to read ${filePath}`, error);
+      console.debug(`MoonSync: Failed to read ${filePath}`, error);
     }
   }
   return books;
@@ -2285,7 +2285,7 @@ async function findExistingFile(app, outputPath, preferredFilename, bookTitle, t
     }
   }
   if (bestMatch) {
-    console.log(`Best match: "${bestMatch.path}" (${(bestMatch.similarity * 100).toFixed(1)}%)`);
+    console.debug(`Best match: "${bestMatch.path}" (${(bestMatch.similarity * 100).toFixed(1)}%)`);
     if (bestMatch.path !== preferredPath) {
       try {
         await app.vault.adapter.rename(bestMatch.path, preferredPath);
@@ -2312,8 +2312,8 @@ async function processBook(app, outputPath, bookData, settings, result, cache, p
     const currentHash = computeHighlightsHash(bookData.highlights);
     const highlightsUnchanged = existingData.highlightsHash ? existingData.highlightsHash === currentHash : existingData.highlightsCount === bookData.highlights.length;
     const progressUnchanged = existingData.progress === bookData.progress;
-    console.log(`[${bookData.book.title}] Existing hash: ${existingData.highlightsHash || "none"} | New hash: ${currentHash}`);
-    console.log(`[${bookData.book.title}] Unchanged: highlights=${highlightsUnchanged}, progress=${progressUnchanged}, hasAttemptedFetch=${hasAttemptedFetch}`);
+    console.debug(`[${bookData.book.title}] Existing hash: ${existingData.highlightsHash || "none"} | New hash: ${currentHash}`);
+    console.debug(`[${bookData.book.title}] Unchanged: highlights=${highlightsUnchanged}, progress=${progressUnchanged}, hasAttemptedFetch=${hasAttemptedFetch}`);
     if (highlightsUnchanged && progressUnchanged && hasAttemptedFetch) {
       result.booksSkipped++;
       return false;
@@ -2561,7 +2561,6 @@ async function refreshIndexNote(app, settings) {
       } catch (e) {
       }
     }
-    const cache = await loadCache(app, outputPath);
     const coversFolder = (0, import_obsidian6.normalizePath)(`${outputPath}/moonsync-covers`);
     for (const bookData of moonReaderBooks) {
       if (!bookData.coverPath) {
@@ -2704,7 +2703,9 @@ var MoonSyncPlugin = class extends import_obsidian7.Plugin {
     this.addCommand({
       id: "sync-now",
       name: "Sync now",
-      callback: () => this.runSync()
+      callback: () => {
+        void this.runSync();
+      }
     });
     this.addCommand({
       id: "create-book-note",
@@ -2714,21 +2715,29 @@ var MoonSyncPlugin = class extends import_obsidian7.Plugin {
     this.addCommand({
       id: "import-note",
       name: "Import note",
-      callback: () => this.importManualExport()
+      callback: () => {
+        void this.importManualExport();
+      }
     });
     this.addCommand({
       id: "refetch-cover",
       name: "Fetch book cover",
-      callback: () => this.refetchBookCover()
+      callback: () => {
+        void this.refetchBookCover();
+      }
     });
     this.addCommand({
       id: "fetch-metadata",
       name: "Fetch book metadata",
-      callback: () => this.fetchBookMetadata()
+      callback: () => {
+        void this.fetchBookMetadata();
+      }
     });
     if (this.settings.syncOnStartup) {
       this.app.workspace.onLayoutReady(() => {
-        setTimeout(() => this.runSync(), 2e3);
+        setTimeout(() => {
+          void this.runSync();
+        }, 2e3);
       });
     }
   }
@@ -2749,7 +2758,9 @@ var MoonSyncPlugin = class extends import_obsidian7.Plugin {
       this.ribbonIconEl = this.addRibbonIcon(
         "book-open",
         "MoonSync: Sync now",
-        () => this.runSync()
+        () => {
+          void this.runSync();
+        }
       );
     }
   }
@@ -2781,7 +2792,7 @@ var MoonSyncPlugin = class extends import_obsidian7.Plugin {
    * Get the path to the sql-wasm.wasm file bundled with the plugin
    */
   getWasmPath() {
-    const pluginDir = this.app.vault.adapter.basePath;
+    const pluginDir = this.app.vault.adapter.getBasePath();
     const pluginPath = this.manifest.dir;
     if (pluginPath) {
       return (0, import_path2.join)(pluginDir, pluginPath, "sql-wasm.wasm");
@@ -2840,7 +2851,7 @@ var MoonSyncPlugin = class extends import_obsidian7.Plugin {
             coverPath = `moonsync-covers/${coverFilename}`;
           }
         } catch (error) {
-          console.log(`MoonSync: Failed to download cover for "${title}"`, error);
+          console.debug(`MoonSync: Failed to download cover for "${title}"`, error);
         }
       }
       const content = generateBookTemplate(
@@ -2977,7 +2988,7 @@ var MoonSyncPlugin = class extends import_obsidian7.Plugin {
         series = bookInfo.series;
         language = bookInfo.language;
       } catch (error) {
-        console.log(`MoonSync: Failed to fetch book info for "${exportData.title}"`, error);
+        console.debug(`MoonSync: Failed to fetch book info for "${exportData.title}"`, error);
       }
       const bookData = {
         book: {

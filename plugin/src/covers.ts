@@ -140,7 +140,7 @@ export async function batchFetchBookInfo(
 					const info = await fetchBookInfo(book.title, book.author);
 					return { key, info };
 				} catch (error) {
-					console.log(`MoonSync: Failed to fetch info for "${book.title}"`, error);
+					console.debug(`MoonSync: Failed to fetch info for "${book.title}"`, error);
 					return { key, info: null };
 				}
 			})
@@ -251,7 +251,7 @@ async function fetchFromOpenLibrary(
 			}
 		}
 	} catch (error) {
-		console.log("MoonSync: Open Library search failed", error);
+		console.debug("MoonSync: Open Library search failed", error);
 	}
 
 	return result;
@@ -341,7 +341,7 @@ async function fetchFromGoogleBooks(
 			}
 		}
 	} catch (error) {
-		console.log("MoonSync: Google Books search failed", error);
+		console.debug("MoonSync: Google Books search failed", error);
 	}
 
 	return result;
@@ -400,7 +400,7 @@ export async function fetchMultipleBookCovers(
 			}
 		}
 	} catch (error) {
-		console.log("MoonSync: Google Books search failed", error);
+		console.debug("MoonSync: Google Books search failed", error);
 	}
 
 	try {
@@ -439,7 +439,7 @@ export async function fetchMultipleBookCovers(
 			}
 		}
 	} catch (error) {
-		console.log("MoonSync: Open Library search failed", error);
+		console.debug("MoonSync: Open Library search failed", error);
 	}
 
 	// Remove duplicates based on cover URL
@@ -458,7 +458,7 @@ export async function downloadCover(url: string): Promise<ArrayBuffer | null> {
 		const response = await requestUrl({ url });
 		return response.arrayBuffer;
 	} catch (error) {
-		console.log("MoonSync: Failed to download cover", error);
+		console.debug("MoonSync: Failed to download cover", error);
 		return null;
 	}
 }
@@ -500,7 +500,7 @@ export async function downloadAndResizeCover(
 
 		const ctx = canvas.getContext("2d");
 		if (!ctx) {
-			console.log("MoonSync: Failed to get canvas context");
+			console.debug("MoonSync: Failed to get canvas context");
 			return arrayBuffer; // Return original if resize fails
 		}
 
@@ -517,7 +517,7 @@ export async function downloadAndResizeCover(
 
 		return await resizedBlob.arrayBuffer();
 	} catch (error) {
-		console.log("MoonSync: Failed to download/resize cover", error);
+		console.debug("MoonSync: Failed to download/resize cover", error);
 		return null;
 	}
 }

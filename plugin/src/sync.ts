@@ -3,7 +3,7 @@ import { SyncSummaryModal } from "./modal";
 import { parseAnnotationFiles } from "./parser/annotations";
 import { generateBookNote, generateFilename, generateIndexNote, generateBaseFile, formatHighlight } from "./writer/markdown";
 import { fetchBookInfo, downloadCover, batchFetchBookInfo, BookInfoResult } from "./covers";
-import { MoonSyncSettings, BookData, MoonReaderHighlight } from "./types";
+import { MoonSyncSettings, BookData } from "./types";
 import { loadCache, saveCache, getCachedInfo, setCachedInfo, BookInfoCache } from "./cache";
 import { scanAllBookNotes, mergeBookLists } from "./scanner";
 import { computeHighlightsHash, parseFrontmatter } from "./utils";
@@ -562,7 +562,7 @@ async function findExistingFile(
 	}
 
 	if (bestMatch) {
-		console.log(`Best match: "${bestMatch.path}" (${(bestMatch.similarity * 100).toFixed(1)}%)`);
+		console.debug(`Best match: "${bestMatch.path}" (${(bestMatch.similarity * 100).toFixed(1)}%)`);
 
 		if (bestMatch.path !== preferredPath) {
 			// Found a match with different filename - rename to preferred filename
@@ -629,8 +629,8 @@ async function processBook(
 			: existingData.highlightsCount === bookData.highlights.length;
 		const progressUnchanged = existingData.progress === bookData.progress;
 
-		console.log(`[${bookData.book.title}] Existing hash: ${existingData.highlightsHash || 'none'} | New hash: ${currentHash}`);
-		console.log(`[${bookData.book.title}] Unchanged: highlights=${highlightsUnchanged}, progress=${progressUnchanged}, hasAttemptedFetch=${hasAttemptedFetch}`);
+		console.debug(`[${bookData.book.title}] Existing hash: ${existingData.highlightsHash || 'none'} | New hash: ${currentHash}`);
+		console.debug(`[${bookData.book.title}] Unchanged: highlights=${highlightsUnchanged}, progress=${progressUnchanged}, hasAttemptedFetch=${hasAttemptedFetch}`);
 
 		// Only skip if: nothing changed AND we've already attempted to fetch metadata
 		// Once we've tried fetching once, don't keep retrying if data isn't available
@@ -1020,11 +1020,6 @@ export async function refreshIndexNote(app: App, settings: MoonSyncSettings): Pr
 				// Dropbox path might not be accessible, that's ok for manual-only use
 			}
 		}
-
-		// Load cache to get canonical titles from Google Books/Open Library
-		const cache = await loadCache(app, outputPath);
-
-		// Don't update Moon Reader book titles from cache - epub metadata is more reliable
 
 		const coversFolder = normalizePath(`${outputPath}/moonsync-covers`);
 

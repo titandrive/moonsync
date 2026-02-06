@@ -1,6 +1,5 @@
 import { App, normalizePath } from "obsidian";
 import { BookData, MoonReaderBook, MoonReaderHighlight } from "./types";
-import { generateFilename } from "./writer/markdown";
 import { parseFrontmatter as parseSharedFrontmatter } from "./utils";
 
 /**
@@ -46,7 +45,7 @@ export async function scanAllBookNotes(app: App, outputPath: string): Promise<Sc
 				books.push(bookData);
 			}
 		} catch (error) {
-			console.log(`MoonSync: Failed to read ${filePath}`, error);
+			console.debug(`MoonSync: Failed to read ${filePath}`, error);
 		}
 	}
 

@@ -1,6 +1,5 @@
 import { App, PluginSettingTab, Setting, TextComponent } from "obsidian";
 import type MoonSyncPlugin from "../main";
-import { MoonSyncSettings } from "./types";
 
 // Electron types for folder picker
 declare global {
@@ -31,7 +30,7 @@ export class MoonSyncSettingTab extends PluginSettingTab {
 		const { containerEl } = this;
 		containerEl.empty();
 
-		containerEl.createEl("h2", { text: "MoonSync settings" });
+		new Setting(containerEl).setName("MoonSync settings").setHeading();
 
 		// Create tab navigation
 		const tabNav = containerEl.createDiv({ cls: "moonsync-tab-nav" });
@@ -74,8 +73,7 @@ export class MoonSyncSettingTab extends PluginSettingTab {
 	}
 
 	private displayConfigurationTab(container: HTMLElement): void {
-		container.createEl("h3", { text: "Configuration" });
-		container.createEl("p", { text: "Set up your Moon Reader backup location and note output folder.", cls: "moonsync-section-desc" });
+		new Setting(container).setName("Configuration").setDesc("Set up your Moon Reader backup location and note output folder.").setHeading();
 
 		let textComponent: TextComponent;
 		let validationEl: HTMLElement;
@@ -93,7 +91,7 @@ export class MoonSyncSettingTab extends PluginSettingTab {
 					.onChange(async (value) => {
 						this.plugin.settings.dropboxPath = value;
 						await this.plugin.saveSettings();
-						await this.validateDropboxPath(value, validationEl);
+						this.validateDropboxPath(value, validationEl);
 					});
 			})
 			.addButton((button) =>
@@ -103,7 +101,7 @@ export class MoonSyncSettingTab extends PluginSettingTab {
 						this.plugin.settings.dropboxPath = folder;
 						textComponent.setValue(folder);
 						await this.plugin.saveSettings();
-						await this.validateDropboxPath(folder, validationEl);
+						this.validateDropboxPath(folder, validationEl);
 					}
 				})
 			);
@@ -129,8 +127,7 @@ export class MoonSyncSettingTab extends PluginSettingTab {
 					})
 			);
 
-		container.createEl("h3", { text: "Sync", attr: { style: "margin-top: 2em;" } });
-		container.createEl("p", { text: "Control when and how MoonSync syncs your highlights.", cls: "moonsync-section-desc" });
+		new Setting(container).setName("Sync").setDesc("Control when and how MoonSync syncs your highlights.").setHeading();
 
 		new Setting(container)
 			.setName("Sync now")
@@ -180,8 +177,7 @@ export class MoonSyncSettingTab extends PluginSettingTab {
 	}
 
 	private displayContentTab(container: HTMLElement): void {
-		container.createEl("h3", { text: "Note content" });
-		container.createEl("p", { text: "Control what data is included in your book notes.", cls: "moonsync-section-desc" });
+		new Setting(container).setName("Note content").setDesc("Control what data is included in your book notes.").setHeading();
 
 		new Setting(container)
 			.setName("Show description")
@@ -237,8 +233,7 @@ export class MoonSyncSettingTab extends PluginSettingTab {
 	}
 
 	private displayIndexBaseTab(container: HTMLElement): void {
-		container.createEl("h3", { text: "Library index" });
-		container.createEl("p", { text: "Configure the automatically generated index of all your books.", cls: "moonsync-section-desc" });
+		new Setting(container).setName("Library index").setDesc("Configure the automatically generated index of all your books.").setHeading();
 
 		new Setting(container)
 			.setName("Generate library index")
@@ -320,8 +315,7 @@ export class MoonSyncSettingTab extends PluginSettingTab {
 					})
 			);
 
-		container.createEl("h3", { text: "Obsidian Bases", attr: { style: "margin-top: 2em;" } });
-		container.createEl("p", { text: "Automatically generate a database configuration file for the Obsidian Bases plugin.", cls: "moonsync-section-desc" });
+		new Setting(container).setName("Obsidian Bases").setDesc("Automatically generate a database configuration file for the Obsidian Bases plugin.").setHeading();
 
 		new Setting(container)
 			.setName("Generate base file")
@@ -362,7 +356,7 @@ export class MoonSyncSettingTab extends PluginSettingTab {
 	}
 
 	private displayAboutTab(container: HTMLElement): void {
-		container.createEl("h3", { text: "About" });
+		new Setting(container).setName("About").setHeading();
 
 		new Setting(container)
 			.setName("Sync your Moon Reader highlights to Obsidian")
@@ -373,7 +367,7 @@ export class MoonSyncSettingTab extends PluginSettingTab {
 				})
 			);
 
-		container.createEl("h3", { text: "Support", attr: { style: "margin-top: 2em;" } });
+		new Setting(container).setName("Support").setHeading();
 
 		new Setting(container)
 			.setName("Buy me a coffee")
@@ -385,7 +379,7 @@ export class MoonSyncSettingTab extends PluginSettingTab {
 			);
 	}
 
-	private async validateDropboxPath(path: string, validationEl: HTMLElement): Promise<void> {
+	private validateDropboxPath(path: string, validationEl: HTMLElement): void {
 		validationEl.empty();
 
 		if (!path) {
