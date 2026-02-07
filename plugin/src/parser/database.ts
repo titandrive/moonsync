@@ -1,4 +1,4 @@
-import initSqlJs, { Database, SqlJsStatic } from "sql.js";
+import initSqlJs, { Database } from "sql.js";
 import { readFile } from "fs/promises";
 import {
 	MoonReaderBook,
@@ -7,7 +7,7 @@ import {
 	BookData,
 } from "../types";
 
-let SQL: SqlJsStatic | null = null;
+let SQL: { Database: new (data: ArrayLike<number>) => Database } | null = null;
 
 /**
  * Initialize sql.js with the WASM binary

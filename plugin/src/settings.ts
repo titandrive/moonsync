@@ -34,7 +34,7 @@ export class MoonSyncSettingTab extends PluginSettingTab {
 		const { containerEl } = this;
 		containerEl.empty();
 
-		new Setting(containerEl).setName("MoonSync settings").setHeading();
+		new Setting(containerEl).setName("General").setHeading();
 
 		// Create tab navigation
 		const tabNav = containerEl.createDiv({ cls: "moonsync-tab-nav" });

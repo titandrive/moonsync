@@ -153,8 +153,8 @@ export default class MoonSyncPlugin extends Plugin {
 		new CreateBookModal(
 			this.app,
 			this.settings,
-			async (bookInfo: BookInfoResult) => {
-				await this.createBookNote(bookInfo);
+			(bookInfo: BookInfoResult) => {
+				void this.createBookNote(bookInfo);
 			}
 		).open();
 	}
@@ -465,66 +465,70 @@ export default class MoonSyncPlugin extends Plugin {
 				this.app,
 				title,
 				author,
-				async (coverUrl: string) => {
-					const progressNotice = new Notice("MoonSync: Downloading cover...", 0);
-
-					try {
-						// Download and save cover
-						const outputPath = normalizePath(this.settings.outputFolder);
-						const coversFolder = normalizePath(`${outputPath}/moonsync-covers`);
-
-						// Ensure covers folder exists
-						if (!(await this.app.vault.adapter.exists(coversFolder))) {
-							await this.app.vault.createFolder(coversFolder);
-						}
-
-						const filename = generateFilename(title);
-						const coverFilename = `${filename}.jpg`;
-						const coverFilePath = normalizePath(`${coversFolder}/${coverFilename}`);
-
-						const imageData = await downloadAndResizeCover(coverUrl);
-						if (!imageData) {
-							progressNotice.hide();
-							new Notice("MoonSync: Failed to download cover image");
-							return;
-						}
-
-						// Delete existing cover first to force cache invalidation
-						const existingFile = this.app.vault.getAbstractFileByPath(coverFilePath);
-						if (existingFile instanceof TFile) {
-							await this.app.vault.delete(existingFile);
-						}
-
-						// Save the new cover using vault method (triggers Obsidian events)
-						await this.app.vault.createBinary(coverFilePath, imageData);
-
-						// Update frontmatter and note body with new cover path
-						const coverPath = `moonsync-covers/${coverFilename}`;
-						const updatedContent = this.updateNoteCover(content, coverPath);
-
-						// Temporarily remove cover embed to force cache invalidation
-						const contentWithoutEmbed = updatedContent.replace(/!\[\[moonsync-covers\/[^\]]+\]\]\n?/, "");
-						await this.app.vault.modify(activeFile, contentWithoutEmbed);
-
-						// Small delay then re-add the embed
-						await new Promise(resolve => setTimeout(resolve, 50));
-						await this.app.vault.modify(activeFile, updatedContent);
-
-						// Refresh index note to include new cover
-						await refreshIndexNote(this.app, this.settings);
-
-						progressNotice.hide();
-						new Notice("MoonSync: Cover updated successfully");
-					} catch (error) {
-						progressNotice.hide();
-						console.error("MoonSync: Failed to download cover", error);
-						new Notice(`MoonSync: Failed to download cover - ${error}`);
-					}
+				(coverUrl: string) => {
+					void this.handleCoverSelected(coverUrl, title, content, activeFile);
 				}
 			).open();
 		} catch (error) {
 			console.error("MoonSync: Failed to re-fetch cover", error);
 			new Notice(`MoonSync: Failed to re-fetch cover - ${error}`);
+		}
+	}
+
+	private async handleCoverSelected(coverUrl: string, title: string, content: string, activeFile: TFile): Promise<void> {
+		const progressNotice = new Notice("MoonSync: Downloading cover...", 0);
+
+		try {
+			// Download and save cover
+			const outputPath = normalizePath(this.settings.outputFolder);
+			const coversFolder = normalizePath(`${outputPath}/moonsync-covers`);
+
+			// Ensure covers folder exists
+			if (!(await this.app.vault.adapter.exists(coversFolder))) {
+				await this.app.vault.createFolder(coversFolder);
+			}
+
+			const filename = generateFilename(title);
+			const coverFilename = `${filename}.jpg`;
+			const coverFilePath = normalizePath(`${coversFolder}/${coverFilename}`);
+
+			const imageData = await downloadAndResizeCover(coverUrl);
+			if (!imageData) {
+				progressNotice.hide();
+				new Notice("MoonSync: Failed to download cover image");
+				return;
+			}
+
+			// Delete existing cover first to force cache invalidation
+			const existingFile = this.app.vault.getAbstractFileByPath(coverFilePath);
+			if (existingFile instanceof TFile) {
+				await this.app.vault.delete(existingFile);
+			}
+
+			// Save the new cover using vault method (triggers Obsidian events)
+			await this.app.vault.createBinary(coverFilePath, imageData);
+
+			// Update frontmatter and note body with new cover path
+			const coverPath = `moonsync-covers/${coverFilename}`;
+			const updatedContent = this.updateNoteCover(content, coverPath);
+
+			// Temporarily remove cover embed to force cache invalidation
+			const contentWithoutEmbed = updatedContent.replace(/!\[\[moonsync-covers\/[^\]]+\]\]\n?/, "");
+			await this.app.vault.modify(activeFile, contentWithoutEmbed);
+
+			// Small delay then re-add the embed
+			await new Promise(resolve => setTimeout(resolve, 50));
+			await this.app.vault.modify(activeFile, updatedContent);
+
+			// Refresh index note to include new cover
+			await refreshIndexNote(this.app, this.settings);
+
+			progressNotice.hide();
+			new Notice("MoonSync: Cover updated successfully");
+		} catch (error) {
+			progressNotice.hide();
+			console.error("MoonSync: Failed to download cover", error);
+			new Notice(`MoonSync: Failed to download cover - ${error}`);
 		}
 	}
 
@@ -617,72 +621,76 @@ export default class MoonSyncPlugin extends Plugin {
 				this.app,
 				title,
 				author,
-				async (bookInfo: BookInfoResult) => {
-					const progressNotice = new Notice("MoonSync: Updating metadata...", 0);
-
-					try {
-						// Get the directory of the current file
-						const fileDir = activeFile.parent?.path || "";
-						const coversFolder = normalizePath(`${fileDir}/moonsync-covers`);
-						let coverPath: string | null = null;
-
-						// Determine new filename based on new title (or keep original if no new title)
-						const newTitle = bookInfo.title || title;
-						const newFilename = generateFilename(newTitle);
-						const newFilePath = normalizePath(`${fileDir}/${newFilename}.md`);
-
-						// Handle cover: download new cover if available
-						if (bookInfo.coverUrl) {
-							if (!(await this.app.vault.adapter.exists(coversFolder))) {
-								await this.app.vault.createFolder(coversFolder);
-							}
-
-							const coverFilename = `${newFilename}.jpg`;
-							const coverFilePath = normalizePath(`${coversFolder}/${coverFilename}`);
-
-							const imageData = await downloadAndResizeCover(bookInfo.coverUrl);
-							if (imageData) {
-								// Delete existing cover first to force cache invalidation
-								const existingCover = this.app.vault.getAbstractFileByPath(coverFilePath);
-								if (existingCover instanceof TFile) {
-									await this.app.vault.delete(existingCover);
-								}
-								await this.app.vault.createBinary(coverFilePath, imageData);
-								coverPath = `moonsync-covers/${coverFilename}`;
-							}
-						}
-
-						// Update the note with all new metadata
-						const updatedContent = this.updateNoteMetadata(content, bookInfo, coverPath);
-
-						// Temporarily remove cover embed to force cache invalidation
-						const contentWithoutEmbed = updatedContent.replace(/!\[\[moonsync-covers\/[^\]]+\]\]\n?/, "");
-						await this.app.vault.modify(activeFile, contentWithoutEmbed);
-
-						// Small delay then re-add the embed
-						await new Promise(resolve => setTimeout(resolve, 50));
-						await this.app.vault.modify(activeFile, updatedContent);
-
-						// Rename file if filename doesn't match the expected name for this title
-						if (activeFile.basename !== newFilename) {
-							await this.app.fileManager.renameFile(activeFile, newFilePath);
-						}
-
-						// Refresh index note
-						await refreshIndexNote(this.app, this.settings);
-
-						progressNotice.hide();
-						new Notice("MoonSync: Metadata updated successfully");
-					} catch (error) {
-						progressNotice.hide();
-						console.error("MoonSync: Failed to update metadata", error);
-						new Notice(`MoonSync: Failed to update metadata - ${error}`);
-					}
+				(bookInfo: BookInfoResult) => {
+					void this.handleMetadataSelected(bookInfo, title, content, activeFile);
 				}
 			).open();
 		} catch (error) {
 			console.error("MoonSync: Failed to fetch metadata", error);
 			new Notice(`MoonSync: Failed to fetch metadata - ${error}`);
+		}
+	}
+
+	private async handleMetadataSelected(bookInfo: BookInfoResult, title: string, content: string, activeFile: TFile): Promise<void> {
+		const progressNotice = new Notice("MoonSync: Updating metadata...", 0);
+
+		try {
+			// Get the directory of the current file
+			const fileDir = activeFile.parent?.path || "";
+			const coversFolder = normalizePath(`${fileDir}/moonsync-covers`);
+			let coverPath: string | null = null;
+
+			// Determine new filename based on new title (or keep original if no new title)
+			const newTitle = bookInfo.title || title;
+			const newFilename = generateFilename(newTitle);
+			const newFilePath = normalizePath(`${fileDir}/${newFilename}.md`);
+
+			// Handle cover: download new cover if available
+			if (bookInfo.coverUrl) {
+				if (!(await this.app.vault.adapter.exists(coversFolder))) {
+					await this.app.vault.createFolder(coversFolder);
+				}
+
+				const coverFilename = `${newFilename}.jpg`;
+				const coverFilePath = normalizePath(`${coversFolder}/${coverFilename}`);
+
+				const imageData = await downloadAndResizeCover(bookInfo.coverUrl);
+				if (imageData) {
+					// Delete existing cover first to force cache invalidation
+					const existingCover = this.app.vault.getAbstractFileByPath(coverFilePath);
+					if (existingCover instanceof TFile) {
+						await this.app.vault.delete(existingCover);
+					}
+					await this.app.vault.createBinary(coverFilePath, imageData);
+					coverPath = `moonsync-covers/${coverFilename}`;
+				}
+			}
+
+			// Update the note with all new metadata
+			const updatedContent = this.updateNoteMetadata(content, bookInfo, coverPath);
+
+			// Temporarily remove cover embed to force cache invalidation
+			const contentWithoutEmbed = updatedContent.replace(/!\[\[moonsync-covers\/[^\]]+\]\]\n?/, "");
+			await this.app.vault.modify(activeFile, contentWithoutEmbed);
+
+			// Small delay then re-add the embed
+			await new Promise(resolve => setTimeout(resolve, 50));
+			await this.app.vault.modify(activeFile, updatedContent);
+
+			// Rename file if filename doesn't match the expected name for this title
+			if (activeFile.basename !== newFilename) {
+				await this.app.fileManager.renameFile(activeFile, newFilePath);
+			}
+
+			// Refresh index note
+			await refreshIndexNote(this.app, this.settings);
+
+			progressNotice.hide();
+			new Notice("MoonSync: Metadata updated successfully");
+		} catch (error) {
+			progressNotice.hide();
+			console.error("MoonSync: Failed to update metadata", error);
+			new Notice(`MoonSync: Failed to update metadata - ${error}`);
 		}
 	}
 

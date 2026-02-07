@@ -53,7 +53,7 @@ export class SyncSummaryModal extends Modal {
 			e.preventDefault();
 			this.close();
 			// Open Obsidian settings and navigate to MoonSync tab
-			const app = this.app as App & { setting: { open(): void; openTabById(id: string): void } };
+			const app = this.app as unknown as { setting: { open(): void; openTabById(id: string): void } };
 			app.setting.open();
 			app.setting.openTabById("moonsync");
 		});
