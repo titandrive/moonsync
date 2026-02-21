@@ -14,6 +14,7 @@ export interface SyncResult {
 	booksCreated: number;
 	booksUpdated: number;
 	booksSkipped: number;
+	booksDeleted: number;
 	manualBooksAdded: number;
 	totalHighlights: number;
 	totalNotes: number;
@@ -36,6 +37,7 @@ export async function syncFromMoonReader(
 		booksCreated: 0,
 		booksUpdated: 0,
 		booksSkipped: 0,
+		booksDeleted: 0,
 		manualBooksAdded: 0,
 		totalHighlights: 0,
 		totalNotes: 0,
@@ -194,7 +196,7 @@ export async function syncFromMoonReader(
 			}
 
 			// Regenerate if: books changed, index doesn't exist, or manual books detected
-			if (result.booksCreated > 0 || result.booksUpdated > 0 || !indexExists || hasManualBooks) {
+			if (result.booksCreated > 0 || result.booksUpdated > 0 || result.booksDeleted > 0 || !indexExists || hasManualBooks) {
 				// Populate cover paths for all books (for the collage)
 				// Get directory listing once instead of checking each file individually
 				const coversFolder = normalizePath(`${outputPath}/moonsync-covers`);
@@ -226,7 +228,7 @@ export async function syncFromMoonReader(
 			const baseExists = await app.vault.adapter.exists(baseFilePath);
 
 			// Regenerate if: books changed or file doesn't exist
-			if (result.booksCreated > 0 || result.booksUpdated > 0 || !baseExists) {
+			if (result.booksCreated > 0 || result.booksUpdated > 0 || result.booksDeleted > 0 || !baseExists) {
 				await updateBaseFile(app, outputPath, settings);
 			}
 		}
@@ -394,6 +396,25 @@ function mergeManualNoteWithMoonReader(
 	}
 
 	return lines.join("\n");
+}
+
+/**
+ * Check if an existing note has custom user content in the "My Notes" section.
+ * Returns true if the user has written content beyond the default placeholder.
+ */
+function hasUserNotes(content: string): boolean {
+	const myNotesPattern = /\n## My [Nn]otes\n([\s\S]*?)(?=\n## |\n---|\s*$)/;
+	const myNotesMatch = content.match(myNotesPattern);
+
+	if (!myNotesMatch) {
+		return false;
+	}
+
+	let notesSection = myNotesMatch[1].trim();
+	const placeholderPattern = /^> \[!moonsync-user-notes\]\+ Your [Nn]otes\n> Add your thoughts, analysis, and notes here\. This section is preserved across syncs\.\n?/;
+	notesSection = notesSection.replace(placeholderPattern, "").trim();
+
+	return notesSection.length > 0;
 }
 
 /**
@@ -620,6 +641,37 @@ async function processBook(
 	// Check if book has changed (compare highlights hash and progress)
 	const existingData = await getExistingBookData(app, filePath);
 	const fileExists = existingData !== null;
+
+	// Handle books with 0 highlights
+	if (bookData.highlights.length === 0) {
+		if (!fileExists) {
+			// No file and no highlights — nothing to do unless tracking is on
+			if (!settings.trackBooksWithoutHighlights) {
+				result.booksSkipped++;
+				return false;
+			}
+		} else if (settings.trackBooksWithoutHighlights) {
+			// Keep note — skip if already cleaned up, otherwise fall through to update
+			if (existingData.highlightsCount === 0) {
+				result.booksSkipped++;
+				return false;
+			}
+		} else if (hasUserNotes(existingData.fullContent!)) {
+			// User has custom My Notes content — skip if already cleaned up, otherwise update
+			if (existingData.highlightsCount === 0) {
+				result.booksSkipped++;
+				return false;
+			}
+		} else {
+			// No tracking, no custom content — delete the note entirely
+			const file = app.vault.getAbstractFileByPath(filePath);
+			if (file) {
+				await app.vault.trash(file, false);
+				result.booksDeleted++;
+			}
+			return false;
+		}
+	}
 
 	if (fileExists) {
 		// Compute hash of current highlights for comparison
@@ -1098,13 +1150,20 @@ export function showSyncResults(app: App, result: SyncResult, settings: MoonSync
 			// Show summary modal on first sync or if there were failures
 			new SyncSummaryModal(app, result, settings).open();
 		} else {
-			const totalProcessed = result.booksCreated + result.booksUpdated;
+			const totalProcessed = result.booksCreated + result.booksUpdated + result.booksDeleted;
 			const totalBooks = totalProcessed + result.booksSkipped + result.manualBooksAdded;
 
 			if (totalProcessed === 0) {
 				new Notice("MoonSync: All books up to date");
 			} else {
-				new Notice(`MoonSync: Updated ${totalProcessed} of ${totalBooks} books`);
+				const parts: string[] = [];
+				if (result.booksCreated + result.booksUpdated > 0) {
+					parts.push(`Updated ${result.booksCreated + result.booksUpdated}`);
+				}
+				if (result.booksDeleted > 0) {
+					parts.push(`Removed ${result.booksDeleted}`);
+				}
+				new Notice(`MoonSync: ${parts.join(", ")} of ${totalBooks} books`);
 			}
 		}
 	} else {

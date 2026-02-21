@@ -178,16 +178,17 @@ export async function parseAnnotationFiles(dropboxPath: string, trackBooksWithou
 				const data = await readFile(filePath);
 				const parsed = parseAnnotationFile(data, anFile);
 
-				if (parsed && parsed.highlights.length > 0) {
-					// Use the title from inside the annotation file (more reliable than filename)
-					const actualTitle = parsed.highlights[0]?.book || parsed.bookTitle;
+				if (parsed) {
+					// Use the title from inside the annotation data when available (more reliable),
+					// fall back to filename-derived title when there are no highlights
+					const actualTitle = (parsed.highlights.length > 0 ? parsed.highlights[0]?.book : null) || parsed.bookTitle;
 					const key = actualTitle.toLowerCase();
 
 					if (!bookDataMap.has(key)) {
 						const book: MoonReaderBook = {
 							id: 0,
 							title: actualTitle,
-							filename: parsed.highlights[0]?.filename || "",
+							filename: (parsed.highlights.length > 0 ? parsed.highlights[0]?.filename : null) || "",
 							author: parsed.author,
 							description: "",
 							category: "",
@@ -218,8 +219,10 @@ export async function parseAnnotationFiles(dropboxPath: string, trackBooksWithou
 					}
 
 					// Add highlights to existing book
-					const bookData = bookDataMap.get(key)!;
-					bookData.highlights.push(...parsed.highlights);
+					if (parsed.highlights.length > 0) {
+						const bookData = bookDataMap.get(key)!;
+						bookData.highlights.push(...parsed.highlights);
+					}
 				}
 			} catch (error) {
 				console.debug(`MoonSync: Error reading ${anFile}`, error);

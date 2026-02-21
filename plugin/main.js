@@ -1298,14 +1298,14 @@ async function parseAnnotationFiles(dropboxPath, trackBooksWithoutHighlights = f
         const filePath = (0, import_path2.join)(cacheDir, anFile);
         const data = await (0, import_promises.readFile)(filePath);
         const parsed = parseAnnotationFile(data, anFile);
-        if (parsed && parsed.highlights.length > 0) {
-          const actualTitle = ((_a = parsed.highlights[0]) == null ? void 0 : _a.book) || parsed.bookTitle;
+        if (parsed) {
+          const actualTitle = (parsed.highlights.length > 0 ? (_a = parsed.highlights[0]) == null ? void 0 : _a.book : null) || parsed.bookTitle;
           const key = actualTitle.toLowerCase();
           if (!bookDataMap.has(key)) {
             const book = {
               id: 0,
               title: actualTitle,
-              filename: ((_b = parsed.highlights[0]) == null ? void 0 : _b.filename) || "",
+              filename: (parsed.highlights.length > 0 ? (_b = parsed.highlights[0]) == null ? void 0 : _b.filename : null) || "",
               author: parsed.author,
               description: "",
               category: "",
@@ -1333,8 +1333,10 @@ async function parseAnnotationFiles(dropboxPath, trackBooksWithoutHighlights = f
               language: null
             });
           }
-          const bookData = bookDataMap.get(key);
-          bookData.highlights.push(...parsed.highlights);
+          if (parsed.highlights.length > 0) {
+            const bookData = bookDataMap.get(key);
+            bookData.highlights.push(...parsed.highlights);
+          }
         }
       } catch (error) {
         console.debug(`MoonSync: Error reading ${anFile}`, error);
@@ -1953,6 +1955,7 @@ async function syncFromMoonReader(app, settings, wasmPath) {
     booksCreated: 0,
     booksUpdated: 0,
     booksSkipped: 0,
+    booksDeleted: 0,
     manualBooksAdded: 0,
     totalHighlights: 0,
     totalNotes: 0,
@@ -2064,7 +2067,7 @@ async function syncFromMoonReader(app, settings, wasmPath) {
       if (hasManualBooks) {
         result.manualBooksAdded = manualBookCount;
       }
-      if (result.booksCreated > 0 || result.booksUpdated > 0 || !indexExists || hasManualBooks) {
+      if (result.booksCreated > 0 || result.booksUpdated > 0 || result.booksDeleted > 0 || !indexExists || hasManualBooks) {
         const coversFolder2 = (0, import_obsidian6.normalizePath)(`${outputPath}/moonsync-covers`);
         let existingCovers = /* @__PURE__ */ new Set();
         try {
@@ -2088,7 +2091,7 @@ async function syncFromMoonReader(app, settings, wasmPath) {
     if (settings.generateBaseFile) {
       const baseFilePath = (0, import_obsidian6.normalizePath)(`${outputPath}/${settings.baseFileName}.base`);
       const baseExists = await app.vault.adapter.exists(baseFilePath);
-      if (result.booksCreated > 0 || result.booksUpdated > 0 || !baseExists) {
+      if (result.booksCreated > 0 || result.booksUpdated > 0 || result.booksDeleted > 0 || !baseExists) {
         await updateBaseFile(app, outputPath, settings);
       }
     }
@@ -2191,6 +2194,17 @@ function mergeManualNoteWithMoonReader(existingContent, bookData, settings) {
     lines.push("");
   }
   return lines.join("\n");
+}
+function hasUserNotes(content) {
+  const myNotesPattern = /\n## My [Nn]otes\n([\s\S]*?)(?=\n## |\n---|\s*$)/;
+  const myNotesMatch = content.match(myNotesPattern);
+  if (!myNotesMatch) {
+    return false;
+  }
+  let notesSection = myNotesMatch[1].trim();
+  const placeholderPattern = /^> \[!moonsync-user-notes\]\+ Your [Nn]otes\n> Add your thoughts, analysis, and notes here\. This section is preserved across syncs\.\n?/;
+  notesSection = notesSection.replace(placeholderPattern, "").trim();
+  return notesSection.length > 0;
 }
 function mergeExistingNoteWithHighlights(existingContent, bookData, settings) {
   const myNotesPattern = /\n## My [Nn]otes\n([\s\S]*?)(?=\n## |\n---|\s*$)/;
@@ -2312,6 +2326,31 @@ async function processBook(app, outputPath, bookData, settings, result, cache, p
   const hasAttemptedFetch = cachedInfo && (cachedInfo.publishedDate !== void 0 && cachedInfo.publisher !== void 0 && cachedInfo.pageCount !== void 0 && cachedInfo.genres !== void 0 && cachedInfo.series !== void 0 && cachedInfo.language !== void 0);
   const existingData = await getExistingBookData(app, filePath);
   const fileExists = existingData !== null;
+  if (bookData.highlights.length === 0) {
+    if (!fileExists) {
+      if (!settings.trackBooksWithoutHighlights) {
+        result.booksSkipped++;
+        return false;
+      }
+    } else if (settings.trackBooksWithoutHighlights) {
+      if (existingData.highlightsCount === 0) {
+        result.booksSkipped++;
+        return false;
+      }
+    } else if (hasUserNotes(existingData.fullContent)) {
+      if (existingData.highlightsCount === 0) {
+        result.booksSkipped++;
+        return false;
+      }
+    } else {
+      const file = app.vault.getAbstractFileByPath(filePath);
+      if (file) {
+        await app.vault.trash(file, false);
+        result.booksDeleted++;
+      }
+      return false;
+    }
+  }
   if (fileExists) {
     const currentHash = computeHighlightsHash(bookData.highlights);
     const highlightsUnchanged = existingData.highlightsHash ? existingData.highlightsHash === currentHash : existingData.highlightsCount === bookData.highlights.length;
@@ -2619,12 +2658,19 @@ function showSyncResults(app, result, settings) {
     } else if (result.isFirstSync || hasFailedBooks) {
       new SyncSummaryModal(app, result, settings).open();
     } else {
-      const totalProcessed = result.booksCreated + result.booksUpdated;
+      const totalProcessed = result.booksCreated + result.booksUpdated + result.booksDeleted;
       const totalBooks = totalProcessed + result.booksSkipped + result.manualBooksAdded;
       if (totalProcessed === 0) {
         new import_obsidian6.Notice("MoonSync: All books up to date");
       } else {
-        new import_obsidian6.Notice(`MoonSync: Updated ${totalProcessed} of ${totalBooks} books`);
+        const parts = [];
+        if (result.booksCreated + result.booksUpdated > 0) {
+          parts.push(`Updated ${result.booksCreated + result.booksUpdated}`);
+        }
+        if (result.booksDeleted > 0) {
+          parts.push(`Removed ${result.booksDeleted}`);
+        }
+        new import_obsidian6.Notice(`MoonSync: ${parts.join(", ")} of ${totalBooks} books`);
       }
     }
   } else {
