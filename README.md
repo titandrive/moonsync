@@ -1,11 +1,11 @@
 # MoonSync
 
-Sync your reading highlights, notes, and progress from Moon+ Reader to Obsidian. MoonSync supports both automatic synchronization using Dropbox or via manual exports. 
+Sync your reading highlights, notes, and progress from Moon+ Reader to Obsidian. MoonSync supports both automatic synchronization using Dropbox/Webdav/FTP or via manual exports. 
 
 <img src="assets/BookScreenshot.png" alt="Book note example" width="420">
 
 ## How It Works
-Whenever you sync a book to the cloud in Moon Reader, it saves this data to two cache files in Dropbox. These files contain all of your book's metadata including highlights, notes, reading progress and book information. MoonSync reads this data and syncs it to your Obsidian vault. 
+Whenever you sync a book to the cloud (via Dropbox/Webdav/FTP) in Moon Reader, it saves this data to two cache files in the sync folder. These files contain all of your book's metadata including highlights, notes, reading progress and book information. MoonSync reads this data and syncs it to your Obsidian vault. 
 
 When MoonSync detects a new book, it pulls metadata from Google Books and Open Library to create a note containing all of your highlights, notes, and book progress as well as book information (cover, genre, date published, etc). 
 
@@ -23,7 +23,7 @@ MoonSync will then keep track of that book and update the note as you make new h
 ### Requirements
 
 - [Moon Reader](https://play.google.com/store/apps/details?id=com.flyersoft.moonreader)
-- [Dropbox Desktop App](https://www.dropbox.com/desktop) 
+- [Dropbox Desktop App](https://www.dropbox.com/desktop) or mounted Webdav/FTP server
 - [Obsidian](https://obsidian.md/download) 
 - [BRAT](https://github.com/TfTHacker/obsidian42-brat) 
 
@@ -74,6 +74,9 @@ Every book note contains a section called "My Notes". You can add your own notes
 2. Once you are finished reading, sync your progress to the cloud. Depending on your app settings, you may need to trigger this manually. 
 3. Trigger MoonSync by opening Obsidian or clicking the ribbon  button. 
 4. Your highlights and reading progress should immediately become available. 
+
+#### FTP/Webdav Support
+Although Dropbox is the easiest way to sync your notes, Moon Reader also supports syncing via Webdav or FTP. This requires you to have your own webdav or FTP server and is therefore a bit more involved to get working. MoonSync has been tested and works perfectly using a selfhosted server such as [SFTPGo](https://github.com/drakkan/sftpgo).
 
 ### Manual Book Sync
 If you do not want to use automatic syncing, via Dropbox, MoonSync also supports manual exports. 
@@ -137,7 +140,7 @@ These settings configure how MoonSync works.
 - **Sync Now** - Trigger manual sync
 - **Sync on Startup** - Automatically sync when Obsidian starts
 - **Show Ribbon Icon** - Show sync button in the ribbon menu
-- **Track Books Without Highlights** - Track books that do not currently have highlights. If enabled, MoonSync will create notes for books you are currently reading but have not created highlights in. Useful if you want to track reading progress but you don't make a lot of higlights.  
+- **Track Books Without Highlights** - Track books that do not currently have highlights. If enabled, MoonSync will create notes for books you are currently reading but have not created highlights in. Useful if you want to track reading progress but you don't make a lot of highlights.  
 
 ### Content Tab
 These settings configure what information is shown in your book notes. 
